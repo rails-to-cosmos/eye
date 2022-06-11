@@ -7,34 +7,28 @@
 (require 'simple)
 (require 'ctable)
 
+(require 'eye-faces)
+
 (defgroup eye nil
   "Bunch of timers."
   :tag "Eye")
 
-(defgroup eye-faces nil
-  "Faces for eye."
-  :tag "Eye Faces"
-  :group 'faces)
-
 (defvar eye-widgets (a-list)
   "List of widgets to show in reports.")
-
-(defface eye-lighter
-    '((((class color) (min-colors 88) (background light)) (:foreground "darkgreen" :height 1.2 :family "FontAwesome"))
-      (((class color) (min-colors 88) (background dark)) (:foreground "#2ecc71" :height 1.2 :family "FontAwesome"))
-      (((class color) (min-colors 16) (background light)) (:foreground "darkgreen" :height 1.2 :family "FontAwesome"))
-      (((class color) (min-colors 16) (background dark)) (:foreground "#2ecc71" :height 1.2 :family "FontAwesome"))
-      (((class color) (min-colors 8)) (:foreground "green" :bold t))
-      (t (:bold t)))
-  "Face used for eye in your modeline."
-  :group 'eye-faces)
 
 (defconst eye-lighter
   #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-lighter face eye-lighter)))
 
+(defconst eye-view-lighter
+  #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-view-lighter face eye-view-lighter)))
+
 (define-minor-mode eye-mode
     "Monitor exwm system in a background."
   nil eye-lighter nil)
+
+(define-derived-mode eye-view-mode special-mode
+  eye-view-lighter
+  "Special mode extended to work with ctbl.")
 
 (defvar eye-daemon-refresh-timer
   (let ((time (current-time))
@@ -47,19 +41,6 @@
 
 (defvar eye-buffer "*eye*")
 
-(defface eye-view-lighter
-    '((((class color) (min-colors 88) (background light)) (:foreground "#8e44ad" :height 1.2 :family "file-icons"))
-      (((class color) (min-colors 88) (background dark)) (:foreground "#9b59b6" :height 1.2 :family "file-icons"))
-      (((class color) (min-colors 16) (background light)) (:foreground "#8e44ad" :height 1.2 :family "file-icons"))
-      (((class color) (min-colors 16) (background dark)) (:foreground "#9b59b6" :height 1.2 :family "file-icons"))
-      (((class color) (min-colors 8)) (:foreground "magenta" :bold t))
-      (t (:bold t)))
-  "Face used for eye in your modeline."
-  :group 'eye-faces)
-
-(defconst eye-view-lighter
-  #(" " 0 1 (rear-nonsticky t display (raise -0.11) font-lock-face eye-view-lighter face eye-view-lighter)))
-
 (defvar eye-view-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
@@ -69,10 +50,6 @@
     (define-key map "g" 'eye-refresh)
 
     map))
-
-(define-derived-mode eye-view-mode special-mode
-  eye-view-lighter
-  "Special mode extended to work with ctbl.")
 
 (defun ctbl::sort-current ()
   (interactive)
