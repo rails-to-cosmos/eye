@@ -16,19 +16,37 @@
 (defvar eye-widgets (a-list)
   "List of widgets to show in reports.")
 
-(defconst eye-lighter
-  #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-lighter face eye-lighter)))
+(defvar eye-lighter
+  (propertize ""
+              'face 'eye-lighter
+              'display '((height 2)
+                         (raise 0))))
 
 (defconst eye-view-lighter
   #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-view-lighter face eye-view-lighter)))
 
 (define-minor-mode eye-mode
     "Monitor exwm system in a background."
-  nil eye-lighter nil)
+  nil
+  (:eval
+   (list mode-line-front-space eye-lighter))
+  nil)
 
-(define-derived-mode eye-view-mode special-mode
-  eye-view-lighter
-  "Special mode extended to work with ctbl.")
+(defvar eye-view-mode-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map special-mode-map)
+
+    (define-key map "n" 'forward-line)
+    (define-key map "p" 'previous-line)
+    (define-key map "g" 'eye-refresh)
+
+    map))
+
+(define-minor-mode eye-view-mode
+    "Special mode extended to work with multiple ctables."
+  nil eye-view-lighter eye-view-mode-map
+  (cond (eye-view-mode (read-only-mode t))
+        (t (read-only-mode nil))))
 
 (defvar eye-daemon-refresh-timer
   (let ((time (current-time))
@@ -38,18 +56,6 @@
     (timer-set-time timer time repeat)
     (timer-set-function timer fn)
     timer))
-
-(defvar eye-buffer "*eye*")
-
-(defvar eye-view-mode-map
-  (let ((map (make-sparse-keymap)))
-    (suppress-keymap map)
-
-    (define-key map "n" 'forward-line)
-    (define-key map "p" 'previous-line)
-    (define-key map "g" 'eye-refresh)
-
-    map))
 
 (defun ctbl::sort-current ()
   (interactive)
@@ -151,59 +157,66 @@
 
 (define-globalized-minor-mode global-eye-mode
     eye-mode eye-mode nil
-    (cond (global-eye-mode (timer-activate eye-daemon-refresh-timer)
-                           (with-current-buffer (get-buffer-create eye-buffer)
-                             (eye-view-mode)))
+    (cond (global-eye-mode (timer-activate eye-daemon-refresh-timer))
           (t (cancel-timer eye-daemon-refresh-timer)
              (eye-deactivate-widgets))))
 
-(cl-defmacro eye-def-widget (name &key model timers on-click on-update)
+(cl-defmacro eye-def-widget (name &key lighter daemon (repeat 1))
   (declare (indent 1))
-  `(let ((widget-id (intern (format ":%s" (quote ,name))))
-         (timers (cl-loop for timer-config in ,timers
-                    collect (let ((time (current-time))
-                                  (repeat 1) ;; TODO grab from config
-                                  (timer (timer-create))
-                                  (fn (a-get timer-config :fn)))
-                              (timer-set-time timer time repeat)
-                              (timer-set-function timer fn)
-                              timer)))
-         (component (with-current-buffer (get-buffer-create eye-buffer)
-                      (eye-view-mode)
-                      (let ((inhibit-read-only t))
-                        (goto-char (point-max))
-                        (unless (= (point) (point-min))
-                          (insert "\n"))
-                        (ctbl:create-table-component-region
-                         :model (eval ,model)
-                         :keymap eye-view-map)))))
+  (let ((vdata (intern (format "eye-%s-data" name)))
+        (vlighter (intern (format "eye-%s-lighter" name)))
+        (vtimer (intern (format "eye-%s-timer" name)))
+        (vmode (intern (format "eye-%s-mode" name)))
+        (vglobal-mode (intern (format "global-eye-%s-mode" name)))
+        (vdaemon (intern (format "eye-%s-daemon" name))))
+    `(let ((widget-id (quote ,name)))
 
-     (when (a-get eye-widgets widget-id)
-       ;; TODO remove widget from eye buffer
-       (mapc #'cancel-timer (a-get* eye-widgets widget-id :timers)))
+       (when (a-get eye-widgets widget-id)
+         (user-error "Widget already defined: %s" widget-id))
 
-     (when ,on-click
-       (ctbl:cp-add-click-hook component ,on-click))
+       (defvar ,vdata (a-list)
+         "Widget data storage.")
 
-     (when ,on-update
-       (ctbl:cp-add-update-hook component ,on-update))
+       (defvar ,vlighter eye-lighter
+         "Widget default lighter.")
 
-     (setq eye-widgets
-           (a-assoc eye-widgets
-                    widget-id
-                    (a-list :model (quote ,model)
-                            :timers timers
-                            :component component)))))
+       (cl-defun ,vdaemon ()
+         (setq ,vlighter (funcall ,lighter ,vdata))
+         (setq ,vdata (funcall ,daemon ,vdata))
+         (redraw-modeline))
+
+       (defvar ,vtimer
+         (let ((time (current-time))
+               (repeat ,repeat)
+               (timer (timer-create))
+               (fn (quote ,vdaemon)))
+           (timer-set-time timer time repeat)
+           (timer-set-function timer fn)
+           timer))
+
+       (define-minor-mode ,vmode
+           "Widget minor mode."
+         nil (:eval (list mode-line-front-space ,vlighter)))
+
+       (define-globalized-minor-mode ,vglobal-mode
+           ,vmode ,vmode nil
+           (cond (,vglobal-mode (timer-activate ,vtimer))
+                 (t (cancel-timer ,vtimer)))))))
+
+(cl-defun eye-widget-insert (widget-id)
+  (let ((component (ctbl:create-table-component-region
+                    :model (eval (a-get* eye-widgets widget-id :model))
+                    :keymap eye-view-map)))
+    (ctbl:cp-add-click-hook component (a-get* eye-widgets widget-id :on-click))
+    (ctbl:cp-add-update-hook component (a-get* eye-widgets widget-id :on-update))))
 
 (cl-defun eye-activate-widgets ()
   (cl-loop for (widget-id . widget) in eye-widgets
-     do (cl-loop for timer in (a-get* widget :timers)
-           do (timer-activate timer))))
+     do (mapc #'timer-activate (a-get* widget :timers))))
 
 (cl-defun eye-deactivate-widgets ()
   (cl-loop for (widget-id . widget) in eye-widgets
-     do (cl-loop for timer in (a-get* widget :timers)
-           do (cancel-timer timer))))
+     do (mapc #'cancel-timer (a-get* widget :timers))))
 
 (cl-defun eye-refresh ()
   (interactive)

@@ -20,8 +20,8 @@
    (string-to-number lhs)
    (string-to-number rhs)))
 
-(defvar eye-network-manager-data (a-list)
-  "Main data storage.")
+;; (defvar eye-network-manager-data (a-list)
+;;   "Main data storage.")
 
 (defconst eye-network-manager-schema
   (list (make-ctbl:cmodel :title "*"
@@ -56,7 +56,7 @@
 
 (defun eye-network-manager-daemon ()
   (interactive)
-  (let* ((buffer (get-buffer-create eye-buffer))
+  (let* ((buffer (get-buffer-create "*eye-network-manager*"))
          (process (start-process "nmcli" buffer "nmcli" "-t" "device" "wifi"))
          (data nil))
 
@@ -73,14 +73,35 @@
                             (when (string= (s-trim status) "finished")
                               (setq eye-network-manager-data data))))))
 
+;; (eye-def-widget network-manager
+;;   :model (make-ctbl:model
+;;           :column-model eye-network-manager-schema
+;;           :data eye-network-manager-data
+;;           :sort-state '(3))
+;;   :timers (list
+;;            (a-list :fn #'eye-network-manager-daemon))
+;;   :on-click (lambda ()
+;;               (let (cp (ctbl:cp-get-component))
+;;                 (message "CTable : Click Hook [%S] [%S] [%S]"
+;;                          (ctbl:cp-get-selected component)
+;;                          (ctbl:cp-get-selected-data-row component)
+;;                          (ctbl:cp-get-selected-data-cell component)))))
+
 (eye-def-widget network-manager
-  :model (make-ctbl:model
-          :column-model eye-network-manager-schema
-          :data eye-network-manager-data
-          :sort-state '(3))
-  :timers (list
-           (a-list :fn #'eye-network-manager-daemon))
-  :on-click (lambda ()
-              (message "Hello")))
+  :daemon (lambda (context)
+            (a-assoc context
+                     :enabled (s-trim (shell-command-to-string "nmcli radio wifi"))
+                     :connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
+  :lighter (lambda (context)
+             (let ((enabled (string= "enabled" (a-get* context :enabled)))
+                   (connectivity (a-get* context :connectivity)))
+               (list
+                (propertize
+                 (cond
+                   ((not enabled) "")
+                   ((string= connectivity "limited") "")
+                   (t ""))
+                 'display '((height 1.2)
+                            (raise -0.1)))))))
 
 (provide 'eye-network-manager)
