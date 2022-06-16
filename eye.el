@@ -32,11 +32,6 @@
 ;;    (list mode-line-front-space eye-lighter))
 ;;   nil)
 
-(defun eye-quit ()
-  (interactive)
-  (delete-windows-on "*Eye*")
-  (kill-buffer "*Eye*"))
-
 (defvar eye-view-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map special-mode-map)
@@ -44,7 +39,6 @@
     (define-key map "n" 'forward-line)
     (define-key map "p" 'previous-line)
     (define-key map "g" 'eye-refresh)
-    (define-key map "q" 'eye-quit)
 
     map))
 
@@ -237,27 +231,33 @@
 ;;        when (eql (a-get params :component) cp)
 ;;        do (ctbl:cp-set-model cp (eval (a-get params :model))))))
 
+(defvar eye-panel-buffer-name "*Eye*")
+
 (defun eye-panel ()
   (interactive)
 
-  (let ((buffer-name "*Eye*"))
-    (when (get-buffer-window buffer-name)
-      (eye-quit))
+  (when (get-buffer-window eye-panel-buffer-name)
+    (eye-panel-quit))
 
-    (let ((buffer (get-buffer-create buffer-name)))
-      (with-current-buffer buffer
-        (eye-view-mode)
-        (let ((window (display-buffer-in-side-window
-                       buffer
-                       (a-list 'side 'bottom
-                               'dedicated t
-                               'window-parameters (a-list 'no-other-window t
-                                                          'no-delete-other-windows t
-                                                          'mode-line-format 'none
-                                                          'header-line-format 'none
-                                                          'tab-line-format 'none)))))
-          (set-window-text-height window 1)
-          (setq-local cursor-type nil
-                      window-size-fixed 'height))))))
+  (let ((buffer (get-buffer-create eye-panel-buffer-name)))
+    (with-current-buffer buffer
+      (eye-view-mode)
+      (let ((window (display-buffer-in-side-window
+                     buffer
+                     (a-list 'side 'bottom
+                             'dedicated t
+                             'window-parameters (a-list 'no-other-window t
+                                                        'no-delete-other-windows t
+                                                        'mode-line-format 'none
+                                                        'header-line-format 'none
+                                                        'tab-line-format 'none)))))
+        (set-window-text-height window 1)
+        (setq-local cursor-type nil
+                    window-size-fixed 'height)))))
+
+(defun eye-panel-quit ()
+  (interactive)
+  (delete-windows-on eye-panel-buffer-name)
+  (kill-buffer eye-panel-buffer-name))
 
 (provide 'eye)
