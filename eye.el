@@ -244,7 +244,7 @@
       (eye-view-mode)
       (let ((window (display-buffer-in-side-window
                      buffer
-                     (a-list 'side 'bottom
+                     (a-list 'side 'top
                              'dedicated t
                              'window-parameters (a-list 'no-other-window t
                                                         'no-delete-other-windows t
