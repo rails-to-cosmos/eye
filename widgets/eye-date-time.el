@@ -4,7 +4,7 @@
 
 (eye-def-widget datetime
   :lighter (lambda (context)
-             (format "%s %s"
+             (format " %s %s"
                      (a-get* context :date)
                      (a-get* context :time)))
   :daemon (lambda (context)

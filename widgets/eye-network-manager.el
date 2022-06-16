@@ -101,7 +101,8 @@
                    ((not enabled) "")
                    ((string= connectivity "limited") "")
                    (t ""))
-                 'display '((height 1.2)
-                            (raise -0.1)))))))
+                 ;; 'display '((height 1.2)
+                 ;;            (raise -0.1))
+                 )))))
 
 (provide 'eye-network-manager)

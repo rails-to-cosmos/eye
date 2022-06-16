@@ -6,26 +6,31 @@
 (eye-def-widget battery
   :daemon (lambda (context)
             (let ((battery-status (funcall battery-status-function)))
-              (a-assoc context
-                       :power (battery-format "%L" battery-status)
-                       :battery (battery-format "%B" battery-status)
-                       :load (battery-format "%p%%" battery-status)
-                       :remaining (battery-format "%t" battery-status))))
+              (a-list
+               :power (battery-format "%L" battery-status)
+               :load (battery-format "%p%%" battery-status)
+               :remaining (battery-format "%t" battery-status))))
   :lighter (lambda (context)
-             (let ((load (string-to-number (a-get* context :load))))
-               (list
-                (propertize
-                 (cond ((> load 90) "")
-                       ((> load 60) "")
-                       ((> load 40) "")
-                       ((> load 5) "")
-                       (t ""))
-                 'display '((height 2)
-                            (raise -0.14)))
+             (let* ((load (string-to-number (a-get context :load)))
+                    (adapter-p (string= "ac" (downcase (a-get context :power))))
+                    (filename (cond (adapter-p (cond ((> load 90) "battery-full-charging-symbolic")
+                                                     ((> load 60) "battery-good-charging-symbolic")
+                                                     ((> load 30) "battery-medium-charging-symbolic")
+                                                     ((> load 5) "battery-caution-charging-symbolic")
+                                                     ((> load 0) "battery-empty-charging-symbolic")))
+                                    (t (cond ((> load 90) "battery-full-symbolic")
+                                             ((> load 60) "battery-good-symbolic")
+                                             ((> load 30) "battery-medium-symbolic")
+                                             ((> load 5) "battery-caution-symbolic")
+                                             ((> load 0) "battery-empty-symbolic"))))))
+               (propertize " " 'display
+                           (create-image (format "/home/akatovda/.emacs.d/stuff/eye/widgets/battery/%s.svg" filename))))))
 
-                mode-line-front-space
+;; ((> load 90) (propertize "" 'display display 'face '(:foreground "#27ae60" :family "FontAwesome")))
+;; ((> load 60) (propertize "" 'display display 'face '(:foreground "#f1c40f" :family "FontAwesome")))
+;; ((> load 40) (propertize "" 'display display 'face '(:foreground "#f39c12" :family "FontAwesome")))
+;; ((> load 5) (propertize "" 'display display 'face '(:foreground "#e67e22" :family "FontAwesome")))
 
-                (format "%d%s" load "%%")))))
 
 ;; (defvar eye-battery-status-data '())
 

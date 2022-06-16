@@ -25,12 +25,17 @@
 (defconst eye-view-lighter
   #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-view-lighter face eye-view-lighter)))
 
-(define-minor-mode eye-mode
-    "Monitor exwm system in a background."
-  nil
-  (:eval
-   (list mode-line-front-space eye-lighter))
-  nil)
+;; (define-minor-mode eye-mode
+;;     "Monitor exwm system in a background."
+;;   nil
+;;   (:eval
+;;    (list mode-line-front-space eye-lighter))
+;;   nil)
+
+(defun eye-quit ()
+  (interactive)
+  (delete-windows-on "*Eye*")
+  (kill-buffer "*Eye*"))
 
 (defvar eye-view-mode-map
   (let ((map (make-sparse-keymap)))
@@ -39,6 +44,7 @@
     (define-key map "n" 'forward-line)
     (define-key map "p" 'previous-line)
     (define-key map "g" 'eye-refresh)
+    (define-key map "q" 'eye-quit)
 
     map))
 
@@ -155,11 +161,11 @@
 
      ("^" . ctbl::sort-current))))
 
-(define-globalized-minor-mode global-eye-mode
-    eye-mode eye-mode nil
-    (cond (global-eye-mode (timer-activate eye-daemon-refresh-timer))
-          (t (cancel-timer eye-daemon-refresh-timer)
-             (eye-deactivate-widgets))))
+;; (define-globalized-minor-mode global-eye-mode
+;;     eye-mode eye-mode nil
+;;     (cond (global-eye-mode (timer-activate eye-daemon-refresh-timer))
+;;           (t (cancel-timer eye-daemon-refresh-timer)
+;;              (eye-deactivate-widgets))))
 
 (cl-defmacro eye-def-widget (name &key lighter daemon (repeat 1))
   (declare (indent 1))
@@ -181,9 +187,13 @@
          "Widget default lighter.")
 
        (cl-defun ,vdaemon ()
+         (setq ,vdata (a-merge ,vdata (funcall ,daemon ,vdata)))
          (setq ,vlighter (funcall ,lighter ,vdata))
-         (setq ,vdata (funcall ,daemon ,vdata))
-         (redraw-modeline))
+         (when (get-buffer-window "*Eye*")
+           (with-current-buffer "*Eye*"
+             (let ((inhibit-read-only t))
+               (delete-region (point-min) (point-max))
+               (insert ,vlighter)))))
 
        (defvar ,vtimer
          (let ((time (current-time))
@@ -194,37 +204,60 @@
            (timer-set-function timer fn)
            timer))
 
-       (define-minor-mode ,vmode
-           "Widget minor mode."
-         nil (:eval (list mode-line-front-space ,vlighter)))
+       (define-minor-mode ,vmode "Widget minor mode.")
+
+       ;; (:eval (list mode-line-front-space ,vlighter))
 
        (define-globalized-minor-mode ,vglobal-mode
            ,vmode ,vmode nil
            (cond (,vglobal-mode (timer-activate ,vtimer))
                  (t (cancel-timer ,vtimer)))))))
 
-(cl-defun eye-widget-insert (widget-id)
-  (let ((component (ctbl:create-table-component-region
-                    :model (eval (a-get* eye-widgets widget-id :model))
-                    :keymap eye-view-map)))
-    (ctbl:cp-add-click-hook component (a-get* eye-widgets widget-id :on-click))
-    (ctbl:cp-add-update-hook component (a-get* eye-widgets widget-id :on-update))))
+;; (cl-defun eye-widget-insert (widget-id)
+;;   (let ((component (ctbl:create-table-component-region
+;;                     :model (eval (a-get* eye-widgets widget-id :model))
+;;                     :keymap eye-view-map)))
+;;     (ctbl:cp-add-click-hook component (a-get* eye-widgets widget-id :on-click))
+;;     (ctbl:cp-add-update-hook component (a-get* eye-widgets widget-id :on-update))))
 
-(cl-defun eye-activate-widgets ()
-  (cl-loop for (widget-id . widget) in eye-widgets
-     do (mapc #'timer-activate (a-get* widget :timers))))
+;; (cl-defun eye-activate-widgets ()
+;;   (cl-loop for (widget-id . widget) in eye-widgets
+;;      do (mapc #'timer-activate (a-get* widget :timers))))
 
-(cl-defun eye-deactivate-widgets ()
-  (cl-loop for (widget-id . widget) in eye-widgets
-     do (mapc #'cancel-timer (a-get* widget :timers))))
+;; (cl-defun eye-deactivate-widgets ()
+;;   (cl-loop for (widget-id . widget) in eye-widgets
+;;      do (mapc #'cancel-timer (a-get* widget :timers))))
 
-(cl-defun eye-refresh ()
+;; (cl-defun eye-refresh ()
+;;   (interactive)
+;;   (when-let (cp (condition-case nil
+;;                     (ctbl:cp-get-component)
+;;                   (error nil)))
+;;     (cl-loop for (widget . params) in eye-widgets
+;;        when (eql (a-get params :component) cp)
+;;        do (ctbl:cp-set-model cp (eval (a-get params :model))))))
+
+(defun eye-panel ()
   (interactive)
-  (when-let (cp (condition-case nil
-                    (ctbl:cp-get-component)
-                  (error nil)))
-    (cl-loop for (widget . params) in eye-widgets
-       when (eql (a-get params :component) cp)
-       do (ctbl:cp-set-model cp (eval (a-get params :model))))))
+
+  (let ((buffer-name "*Eye*"))
+    (when (get-buffer-window buffer-name)
+      (eye-quit))
+
+    (let ((buffer (get-buffer-create buffer-name)))
+      (with-current-buffer buffer
+        (eye-view-mode)
+        (let ((window (display-buffer-in-side-window
+                       buffer
+                       (a-list 'side 'bottom
+                               'dedicated t
+                               'window-parameters (a-list 'no-other-window t
+                                                          'no-delete-other-windows t
+                                                          'mode-line-format 'none
+                                                          'header-line-format 'none
+                                                          'tab-line-format 'none)))))
+          (set-window-text-height window 1)
+          (setq-local cursor-type nil
+                      window-size-fixed 'height))))))
 
 (provide 'eye)
