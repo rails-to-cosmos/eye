@@ -6,6 +6,7 @@
 (require 's)
 (require 'simple)
 (require 'ctable)
+(require 'svg)
 
 (require 'eye-faces)
 
@@ -25,12 +26,12 @@
 (defconst eye-view-lighter
   #(" " 0 1 (rear-nonsticky t display nil font-lock-face eye-view-lighter face eye-view-lighter)))
 
-;; (define-minor-mode eye-mode
-;;     "Monitor exwm system in a background."
-;;   nil
-;;   (:eval
-;;    (list mode-line-front-space eye-lighter))
-;;   nil)
+(define-minor-mode eye-mode
+    "Monitor exwm system in a background."
+  nil
+  (:eval
+   (list mode-line-front-space eye-lighter))
+  nil)
 
 (defvar eye-view-mode-map
   (let ((map (make-sparse-keymap)))
@@ -47,15 +48,6 @@
   nil eye-view-lighter eye-view-mode-map
   (cond (eye-view-mode (read-only-mode t))
         (t (read-only-mode nil))))
-
-(defvar eye-daemon-refresh-timer
-  (let ((time (current-time))
-        (repeat 1)
-        (timer (timer-create))
-        (fn #'eye-activate-widgets))
-    (timer-set-time timer time repeat)
-    (timer-set-function timer fn)
-    timer))
 
 (defun ctbl::sort-current ()
   (interactive)
@@ -155,11 +147,10 @@
 
      ("^" . ctbl::sort-current))))
 
-;; (define-globalized-minor-mode global-eye-mode
-;;     eye-mode eye-mode nil
-;;     (cond (global-eye-mode (timer-activate eye-daemon-refresh-timer))
-;;           (t (cancel-timer eye-daemon-refresh-timer)
-;;              (eye-deactivate-widgets))))
+(define-globalized-minor-mode global-eye-mode
+    eye-mode eye-mode nil
+    (cond (global-eye-mode (timer-activate eye-panel-refresh-timer))
+          (t (cancel-timer eye-panel-refresh-timer))))
 
 (cl-defmacro eye-def-widget (name &key lighter daemon (repeat 1))
   (declare (indent 1))
@@ -182,12 +173,7 @@
 
        (cl-defun ,vdaemon ()
          (setq ,vdata (a-merge ,vdata (funcall ,daemon ,vdata)))
-         (setq ,vlighter (funcall ,lighter ,vdata))
-         (when (get-buffer-window "*Eye*")
-           (with-current-buffer "*Eye*"
-             (let ((inhibit-read-only t))
-               (delete-region (point-min) (point-max))
-               (insert ,vlighter)))))
+         (setq ,vlighter (funcall ,lighter ,vdata)))
 
        (defvar ,vtimer
          (let ((time (current-time))
@@ -205,7 +191,8 @@
        (define-globalized-minor-mode ,vglobal-mode
            ,vmode ,vmode nil
            (cond (,vglobal-mode (timer-activate ,vtimer))
-                 (t (cancel-timer ,vtimer)))))))
+                 (t (cancel-timer ,vtimer)
+                    (setq ,vlighter (funcall ,lighter ,vdata))))))))
 
 ;; (cl-defun eye-widget-insert (widget-id)
 ;;   (let ((component (ctbl:create-table-component-region
@@ -231,7 +218,29 @@
 ;;        when (eql (a-get params :component) cp)
 ;;        do (ctbl:cp-set-model cp (eval (a-get params :model))))))
 
+(defvar eye-panel-format (list))
+
 (defvar eye-panel-buffer-name "*Eye*")
+
+(defvar eye-panel-refresh-timer
+  (let ((time (current-time))
+        (repeat 1)
+        (timer (timer-create))
+        (fn #'eye-panel-refresh))
+    (timer-set-time timer time repeat)
+    (timer-set-function timer fn)
+    timer))
+
+(defun eye-panel-refresh ()
+  (when-let (window (get-buffer-window "*Eye*"))
+    (with-current-buffer "*Eye*"
+      (let ((inhibit-read-only t)
+            (window-height (window-body-height window t))
+            content-height)
+        (delete-region (point-min) (point-max))
+        (cl-loop for widget in eye-panel-format
+           when (symbolp widget)
+           do (insert-image (eval (intern (format "eye-%s-lighter" widget)))))))))
 
 (defun eye-panel ()
   (interactive)
@@ -242,6 +251,7 @@
   (let ((buffer (get-buffer-create eye-panel-buffer-name)))
     (with-current-buffer buffer
       (eye-view-mode)
+
       (let ((window (display-buffer-in-side-window
                      buffer
                      (a-list 'side 'top
@@ -259,5 +269,43 @@
   (interactive)
   (delete-windows-on eye-panel-buffer-name)
   (kill-buffer eye-panel-buffer-name))
+
+(defun multiline-svg (&rest lines)
+  (let* ((font (face-attribute 'default :font))
+         (info (font-info font))
+         (name (aref info 1))
+         (font-family (font-get font :family))
+         (size (font-get font :size))
+         (height (font-get font :height))
+         (font-weight "normal")
+         (average-width (aref info 11))
+         (space-width (aref info 10))
+         (letter-spacing 1))
+    (cl-loop for line in lines
+       with default-params = (a-list
+                              :font-family font-family
+                              :font-size size
+                              :font-width average-width
+                              :letter-spacing letter-spacing
+                              :font-weight font-weight
+                              :fill "white")
+       collect (cond ((listp line) (a-merge default-params line))
+                     ((stringp line) (a-merge default-params (a-list :text line))))
+       into svg-lines
+       finally (return (let* ((width (* (+ 1 letter-spacing average-width) (-max (mapcar #'length lines))))
+                              (height (* (line-pixel-height) (length lines)))
+                              (svg (svg-create width height))
+                              (margin-top 0))
+                         (cl-loop for svg-line in svg-lines
+                            do (incf margin-top (a-get svg-line :font-size))
+                            do (svg-text svg (a-get svg-line :text)
+                                         :font-family (a-get svg-line :font-family)
+                                         :font-weight (a-get svg-line :font-weight)
+                                         :letter-spacing (a-get svg-line :letter-spacing)
+                                         :font-size (a-get svg-line :font-size)
+                                         :fill (a-get svg-line :fill)
+                                         :x 0
+                                         :y margin-top))
+                         svg)))))
 
 (provide 'eye)
