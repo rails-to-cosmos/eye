@@ -95,14 +95,10 @@
   :lighter (lambda (context)
              (let ((enabled (string= "enabled" (a-get* context :enabled)))
                    (connectivity (a-get* context :connectivity)))
-               (list
-                (propertize
-                 (cond
-                   ((not enabled) "")
-                   ((string= connectivity "limited") "")
-                   (t ""))
-                 ;; 'display '((height 1.2)
-                 ;;            (raise -0.1))
-                 )))))
+               (svg-image (multiline-svg
+                           (cond
+                             ((not enabled) "")
+                             ((string= connectivity "limited") "")
+                             (t "")))))))
 
 (provide 'eye-network-manager)

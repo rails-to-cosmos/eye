@@ -250,7 +250,7 @@
                 (insert-image image)
                 (insert " ")) )))))
 
-(defun eye-panel ()
+(cl-defun eye-panel (&optional (panel-height 2))
   (interactive)
 
   (when (get-buffer-window eye-panel-buffer-name)
@@ -258,8 +258,6 @@
 
   (let ((buffer (get-buffer-create eye-panel-buffer-name)))
     (with-current-buffer buffer
-      ;; (eye-view-mode)
-
       (let ((window (display-buffer-in-side-window
                      buffer
                      (a-list 'side 'top
@@ -270,7 +268,7 @@
                                                         'header-line-format 'none
                                                         'tab-line-format 'none)))))
 
-        (set-window-text-height window 2)
+        (set-window-text-height window panel-height)
         (setq-local cursor-type nil
                     window-size-fixed 'height)))))
 
@@ -280,8 +278,7 @@
   (kill-buffer eye-panel-buffer-name))
 
 (defun multiline-svg (&rest lines)
-  (let* (
-         (font (face-attribute 'default :font))
+  (let* ((font (face-attribute 'default :font))
          (info (font-info font))
          (name (aref info 1))
          (font-family (font-get font :family))
@@ -290,7 +287,7 @@
          (font-weight "normal")
          (average-width (aref info 11))
          (space-width (aref info 10))
-         (letter-spacing 1))
+         (letter-spacing 0))
     (cl-loop for line in lines
        with default-params = (a-list
                               :font-family font-family
@@ -303,28 +300,16 @@
        collect (cond ((listp line) (a-merge default-params line))
                      ((stringp line) (a-merge default-params (a-list :text line))))
        into svg-lines
-       finally (return (let* (
-                              (width (* (+ letter-spacing (car eye-panel-font-size))
-                                        (1+ (-max (mapcar #'length lines)))))
-                              (height eye-panel-text-height)
-                              (svg (svg-create width height))
-                              (margin-top 0))
+       finally (return (let* ((image-width (* (+ letter-spacing (car eye-panel-font-size))
+                                              (1+ (-max (mapcar #'length lines)))))
+                              (image-height eye-panel-text-height)
+                              (svg (svg-create image-width image-height))
+                              (margin-top (/ (- image-height (* (length svg-lines) font-size)) (1+ (length svg-lines)))))
 
-                         (svg-rectangle svg 0 0 width height
-                                        :stroke-width 2
-                                        :stroke-color "yellow")
-
-                         ;; (pp (with-temp-buffer
-                         ;;       (insert "battery-good-symbolic")
-                         ;;       (window-text-pixel-size (get-buffer-window "*Eye*")
-                         ;;                               (point-min)
-                         ;;                               (point-max))))
-
-                         ;; (svg-rectangle svg 0 0
-
-                         ;;                height
+                         ;; (svg-rectangle svg 0 0 image-width image-height
                          ;;                :stroke-width 2
-                         ;;                :stroke-color "orange")
+                         ;;                :stroke-color "#4CB5F5")
+
                          (cl-loop for svg-line in svg-lines
                             do
                               (incf margin-top (a-get svg-line :font-size))

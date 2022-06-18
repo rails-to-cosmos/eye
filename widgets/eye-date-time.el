@@ -6,13 +6,13 @@
   :daemon (lambda (context)
             (let ((now (current-time)))
               (a-assoc context
-                       :date (format-time-string "%a %d %b" now)
+                       :date (format-time-string "%d %b, %a" now)
                        :time (format-time-string "%H:%M" now))))
   :lighter (lambda (context)
              (svg-image (multiline-svg
+                         (a-get context :date)
                          (a-list :text (a-get context :time)
-                                 :font-weight "bold")
-                         (a-get context :date)))))
+                                 :font-weight "bold")))))
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")
