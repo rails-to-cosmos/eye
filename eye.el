@@ -221,6 +221,8 @@
 (defvar eye-panel-format (list))
 
 (defvar eye-panel-buffer-name "*Eye*")
+(defvar eye-panel-font-size nil)
+(defvar eye-panel-text-height nil)
 
 (defvar eye-panel-refresh-timer
   (let ((time (current-time))
@@ -235,12 +237,18 @@
   (when-let (window (get-buffer-window "*Eye*"))
     (with-current-buffer "*Eye*"
       (let ((inhibit-read-only t)
-            (window-height (window-body-height window t))
             content-height)
         (delete-region (point-min) (point-max))
+        (insert "I've always thought they were lighthouses ")
+
+        (setq eye-panel-font-size (window-text-pixel-size window (point-min) (+ 1 (point-min)))
+              eye-panel-text-height (window-text-height window t))
+
         (cl-loop for widget in eye-panel-format
            when (symbolp widget)
-           do (insert-image (eval (intern (format "eye-%s-lighter" widget)))))))))
+           do (let ((image (eval (intern (format "eye-%s-lighter" widget)))))
+                (insert-image image)
+                (insert " ")) )))))
 
 (defun eye-panel ()
   (interactive)
@@ -250,7 +258,7 @@
 
   (let ((buffer (get-buffer-create eye-panel-buffer-name)))
     (with-current-buffer buffer
-      (eye-view-mode)
+      ;; (eye-view-mode)
 
       (let ((window (display-buffer-in-side-window
                      buffer
@@ -261,7 +269,8 @@
                                                         'mode-line-format 'none
                                                         'header-line-format 'none
                                                         'tab-line-format 'none)))))
-        (set-window-text-height window 1)
+
+        (set-window-text-height window 2)
         (setq-local cursor-type nil
                     window-size-fixed 'height)))))
 
@@ -271,12 +280,13 @@
   (kill-buffer eye-panel-buffer-name))
 
 (defun multiline-svg (&rest lines)
-  (let* ((font (face-attribute 'default :font))
+  (let* (
+         (font (face-attribute 'default :font))
          (info (font-info font))
          (name (aref info 1))
          (font-family (font-get font :family))
-         (size (font-get font :size))
-         (height (font-get font :height))
+         (font-size (font-get font :size))
+         (font-height (font-get font :height))
          (font-weight "normal")
          (average-width (aref info 11))
          (space-width (aref info 10))
@@ -284,28 +294,48 @@
     (cl-loop for line in lines
        with default-params = (a-list
                               :font-family font-family
-                              :font-size size
+                              :font-size font-size
                               :font-width average-width
                               :letter-spacing letter-spacing
                               :font-weight font-weight
+                              :font-height font-height
                               :fill "white")
        collect (cond ((listp line) (a-merge default-params line))
                      ((stringp line) (a-merge default-params (a-list :text line))))
        into svg-lines
-       finally (return (let* ((width (* (+ 1 letter-spacing average-width) (-max (mapcar #'length lines))))
-                              (height (* (line-pixel-height) (length lines)))
+       finally (return (let* (
+                              (width (* (+ letter-spacing (car eye-panel-font-size))
+                                        (1+ (-max (mapcar #'length lines)))))
+                              (height eye-panel-text-height)
                               (svg (svg-create width height))
                               (margin-top 0))
+
+                         (svg-rectangle svg 0 0 width height
+                                        :stroke-width 2
+                                        :stroke-color "yellow")
+
+                         ;; (pp (with-temp-buffer
+                         ;;       (insert "battery-good-symbolic")
+                         ;;       (window-text-pixel-size (get-buffer-window "*Eye*")
+                         ;;                               (point-min)
+                         ;;                               (point-max))))
+
+                         ;; (svg-rectangle svg 0 0
+
+                         ;;                height
+                         ;;                :stroke-width 2
+                         ;;                :stroke-color "orange")
                          (cl-loop for svg-line in svg-lines
-                            do (incf margin-top (a-get svg-line :font-size))
-                            do (svg-text svg (a-get svg-line :text)
-                                         :font-family (a-get svg-line :font-family)
-                                         :font-weight (a-get svg-line :font-weight)
-                                         :letter-spacing (a-get svg-line :letter-spacing)
-                                         :font-size (a-get svg-line :font-size)
-                                         :fill (a-get svg-line :fill)
-                                         :x 0
-                                         :y margin-top))
+                            do
+                              (incf margin-top (a-get svg-line :font-size))
+                              (svg-text svg (a-get svg-line :text)
+                                        :font-family (a-get svg-line :font-family)
+                                        :font-weight (a-get svg-line :font-weight)
+                                        :letter-spacing (a-get svg-line :letter-spacing)
+                                        :font-size (a-get svg-line :font-size)
+                                        :fill (a-get svg-line :fill)
+                                        :x 0
+                                        :y margin-top))
                          svg)))))
 
 (provide 'eye)
