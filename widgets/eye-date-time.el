@@ -2,17 +2,11 @@
 
 (require 'eye)
 
-(eye-def-widget datetime
-  :daemon (lambda (context)
-            (let ((now (current-time)))
-              (a-assoc context
-                       :date (format-time-string "%d %b, %a" now)
-                       :time (format-time-string "%H:%M" now))))
-  :lighter (lambda (context)
-             (svg-image (multiline-svg
-                         (a-get context :date)
-                         (a-list :text (a-get context :time)
-                                 :font-weight "bold")))))
+(eye-let dt
+  (let* ((now (current-time))
+         (date (format-time-string "%d %b, %a" now))
+         (time (format-time-string "%H:%M" now)))
+    (svg-image (multiline-svg date (a-list :text time :font-weight "bold")))))
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

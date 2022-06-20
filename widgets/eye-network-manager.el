@@ -87,18 +87,12 @@
 ;;                          (ctbl:cp-get-selected-data-row component)
 ;;                          (ctbl:cp-get-selected-data-cell component)))))
 
-(eye-def-widget network-manager
-  :daemon (lambda (context)
-            (a-assoc context
-                     :enabled (s-trim (shell-command-to-string "nmcli radio wifi"))
-                     :connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
-  :lighter (lambda (context)
-             (let ((enabled (string= "enabled" (a-get* context :enabled)))
-                   (connectivity (a-get* context :connectivity)))
-               (svg-image (multiline-svg
-                           (cond
-                             ((not enabled) "")
-                             ((string= connectivity "limited") "")
-                             (t "")))))))
+(eye-let wifi
+  (let* ((enabled (s-trim (shell-command-to-string "nmcli radio wifi")))
+         (connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
+    (svg-image (multiline-svg (cond
+                                ((not enabled) "")
+                                ((string= connectivity "limited") "")
+                                (t ""))))))
 
 (provide 'eye-network-manager)
