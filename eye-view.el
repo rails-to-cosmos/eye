@@ -16,7 +16,7 @@
   "Bunch of timers."
   :tag "Eye")
 
-(defvar eye-widgets (a-list)
+(defvar eyecons (a-list)
   "List of widgets to show in reports.")
 
 (defvar eye-lighter
@@ -142,19 +142,19 @@
 
      ("^" . ctbl::sort-current))))
 
-;; (cl-defun eye-widget-insert (widget-id)
+;; (cl-defun eyecon-insert (widget-id)
 ;;   (let ((component (ctbl:create-table-component-region
-;;                     :model (eval (a-get* eye-widgets widget-id :model))
+;;                     :model (eval (a-get* eyecons widget-id :model))
 ;;                     :keymap eye-view-map)))
-;;     (ctbl:cp-add-click-hook component (a-get* eye-widgets widget-id :on-click))
-;;     (ctbl:cp-add-update-hook component (a-get* eye-widgets widget-id :on-update))))
+;;     (ctbl:cp-add-click-hook component (a-get* eyecons widget-id :on-click))
+;;     (ctbl:cp-add-update-hook component (a-get* eyecons widget-id :on-update))))
 
 ;; (cl-defun eye-activate-widgets ()
-;;   (cl-loop for (widget-id . widget) in eye-widgets
+;;   (cl-loop for (widget-id . widget) in eyecons
 ;;      do (mapc #'timer-activate (a-get* widget :timers))))
 
 ;; (cl-defun eye-deactivate-widgets ()
-;;   (cl-loop for (widget-id . widget) in eye-widgets
+;;   (cl-loop for (widget-id . widget) in eyecons
 ;;      do (mapc #'cancel-timer (a-get* widget :timers))))
 
 ;; (cl-defun eye-refresh ()
@@ -162,7 +162,7 @@
 ;;   (when-let (cp (condition-case nil
 ;;                     (ctbl:cp-get-component)
 ;;                   (error nil)))
-;;     (cl-loop for (widget . params) in eye-widgets
+;;     (cl-loop for (widget . params) in eyecons
 ;;        when (eql (a-get params :component) cp)
 ;;        do (ctbl:cp-set-model cp (eval (a-get params :model))))))
 

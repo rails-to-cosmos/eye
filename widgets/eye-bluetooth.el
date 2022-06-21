@@ -13,7 +13,7 @@
                                   ((string= (s-trim key) "Alias") (a-list :alias val))))
                   into params
                   finally (return (apply #'a-merge params)))))
-    (eye-widget "Bluetooth" (a-list :text (cond ((a-get data :powered) "on")
+    (eyecon "Bluetooth" (a-list :text (cond ((a-get data :powered) "on")
                                                 (t "off"))
                                     :font-weight "bold"))))
 

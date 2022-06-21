@@ -6,7 +6,7 @@
   (let* ((now (current-time))
          (date (format-time-string "%d %b, %a" now))
          (time (format-time-string "%H:%M" now)))
-    (eye-widget date (a-list :text time :font-weight "bold"))))
+    (eyecon date (a-list :text time :font-weight "bold"))))
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

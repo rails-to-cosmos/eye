@@ -51,7 +51,7 @@
          ;;             ((> volume 0) 'audio-volume-low)
          ;;             (t 'audio-volume-muted)))
          )
-    (eye-widget "Volume" (a-list :text volume :font-weight "bold"))
+    (eyecon "Volume" (a-list :text volume :font-weight "bold"))
     ;; (create-image (eval icon) 'svg t :scale 1)
     ))
 

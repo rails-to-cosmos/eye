@@ -13,7 +13,7 @@
     (timer-set-function timer fn)
     timer))
 
-(defun eye-widget (&rest lines)
+(defun eyecon (&rest lines)
   (let* ((font (face-attribute 'default :family))
          (font-weight "normal")
          (lines (cl-loop
@@ -54,7 +54,7 @@
     (svg-image svg)))
 
 (defun eye-separator ()
-  (eye-widget ""))
+  (eyecon ""))
 
 (define-minor-mode eye-panel-mode
     "Draw simple panel.")
@@ -87,13 +87,24 @@
                  (delete-region (point-min) (point-max))
                  (setq window-size-fixed 'height))))
            (timer-activate eye-panel-refresh-timer))
-          (t (cancel-timer eye-panel-refresh-timer))))
+          (t (cancel-timer eye-panel-refresh-timer)
+             (cl-loop for widget in eye-widgets
+                do (eval (list (intern (format "global-eye-%s-mode" widget)) -1))))))
 
 (defun eye-panel-refresh ()
   (when-let (window (get-buffer-window eye-panel-buffer-name))
     (with-current-buffer eye-panel-buffer-name
       (let ((inhibit-read-only t))
         (delete-region (point-min) (point-max))
+
+        (cl-loop for widget in eye-widgets
+           if (member widget eye-panel-format)
+           ;; (and
+           ;;  (not (eval (intern (format "global-eye-%s-mode" widget)))))
+           do (eval (list (intern (format "global-eye-%s-mode" widget)) +1))
+           else
+           do (eval (list (intern (format "global-eye-%s-mode" widget)) -1)))
+
         (cl-loop for widget in eye-panel-format
            do (when-let (image (funcall (intern (format "eye-%s-lighter" widget))))
                 (insert-image image)
@@ -103,6 +114,9 @@
   (interactive)
   (delete-windows-on eye-panel-buffer-name)
   (kill-buffer eye-panel-buffer-name))
+
+(defvar eye-widgets (list)
+  "List of widgets to show in reports.")
 
 (cl-defmacro eye-let (widget-name let-forms)
   (declare (indent 1) (debug t))
@@ -120,6 +134,7 @@
                                 append (list (intern (format ":%s" key)) key)))))
 
     `(progn
+       (cl-pushnew (quote ,widget-name) eye-widgets)
        (define-minor-mode ,(a-get widget-vars :mode) "Widget minor mode.")
 
        (define-globalized-minor-mode ,(a-get widget-vars :global-mode)

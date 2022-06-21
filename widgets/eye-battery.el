@@ -182,7 +182,7 @@
                             ((> load 30) 'battery-060)
                             ((> load 10) 'battery-020)
                             ((> load 0) 'battery-000)))))))
-    (eye-widget
+    (eyecon
      (a-list :text "Battery")
      (a-list :text (format "%s%%" load)
              :font-weight "bold"))

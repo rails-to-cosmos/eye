@@ -90,7 +90,7 @@
 (eye-let wifi
   (let* ((enabled (s-trim (shell-command-to-string "nmcli radio wifi")))
          (connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
-    (eye-widget "Wi-Fi" (a-list :text (cond
+    (eyecon "Wi-Fi" (a-list :text (cond
                                         ((not enabled) "disabled")
                                         ((string= connectivity "limited") "limited")
                                         (t "on"))
