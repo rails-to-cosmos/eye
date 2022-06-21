@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'eye)
+(require 'eye-panel)
 (require 'battery)
 
 (defconst battery-000-charging "<svg width=\"24\" height=\"24\" enable-background=\"new\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">

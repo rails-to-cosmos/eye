@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'eye)
+(require 'eye-panel)
 
 (eye-let dt
   (let* ((now (current-time))

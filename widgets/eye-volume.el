@@ -1,7 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'eye)
-
 (defconst audio-volume-high "<svg width=\"24\" height=\"24\" enable-background=\"new\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">
  <title>Paper Symbolic Icon Theme</title>
  <g transform=\"translate(3.9998 3.9996)\" enable-background=\"new\" fill=\"#ffffff\">
