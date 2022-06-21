@@ -4,6 +4,6 @@
 
 (eye-let brightness
   (let* ((brightness (car (last (s-split " " (s-trim (shell-command-to-string "brightness")))))))
-    (svg-image (multiline-svg "Brightness" (a-list :text brightness :font-weight "bold")))))
+    (eye-widget "Brightness" (a-list :text brightness :font-weight "bold"))))
 
 (provide 'eye-brightness)

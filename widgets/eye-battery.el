@@ -3,7 +3,29 @@
 (require 'eye-panel)
 (require 'battery)
 
-(defconst battery-000-charging "<svg width=\"24\" height=\"24\" enable-background=\"new\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">
+;; (with-current-buffer (get-buffer-create "*Paint*")
+;;   (delete-region (point-min) (point-max))
+;;   (let ((svg (svg-create 16 16 :viewBox "0 0 16 16" :fill "white")))
+;;     (svg-path svg '((moveto ((9.585 . 2.568)))
+;;                     (elliptical-arc ((0.5 0.5 0 0 1 0.226 0.58)))
+;;                     (horizontal-lineto ((8.677 . 6.832))))
+;;               :relative nil
+;;               :fill-color "lightblue")
+;;     (svg-print svg)
+;;     (insert "\n")
+;;     (svg-insert-image svg)))
+
+
+(defconst battery-charging
+  "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-battery-charging\" viewBox=\"0 0 16 16\">
+  <path fill=\"#ffffff\" d=\"M9.585 2.568a.5.5 0 0 1 .226.58L8.677 6.832h1.99a.5.5 0 0 1 .364.843l-5.334 5.667a.5.5 0 0 1-.842-.49L5.99 9.167H4a.5.5 0 0 1-.364-.843l5.333-5.667a.5.5 0 0 1 .616-.09z\"/>
+  <path fill=\"#ffffff\" d=\"M2 4h4.332l-.94 1H2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h2.38l-.308 1H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z\"/>
+  <path fill=\"#ffffff\" d=\"M2 6h2.45L2.908 7.639A1.5 1.5 0 0 0 3.313 10H2V6zm8.595-2-.308 1H12a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H9.276l-.942 1H12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.405z\"/>
+  <path fill=\"#ffffff\" d=\"M12 10h-1.783l1.542-1.639c.097-.103.178-.218.241-.34V10zm0-3.354V6h-.646a1.5 1.5 0 0 1 .646.646zM16 8a1.5 1.5 0 0 1-1.5 1.5v-3A1.5 1.5 0 0 1 16 8z\"/>
+</svg>"
+  )
+
+(defconst battery-000-charging "<svg width=\"24\" height=\"24\" enable-background=\"new\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">
  <title>Paper Symbolic Icon Theme</title>
  <g transform=\"translate(2,4)\" fill=\"#ffffff\">
   <path d=\"m2 3c-1.108 0-2 0.892-2 2v6c0 1.108 0.892 2 2 2h13c1.108 0 2-0.892 2-2v-6c0-1.108-0.892-2-2-2zm0 1h13c0.554 0 1 0.446 1 1v6c0 0.554-0.446 1-1 1h-13c-0.554 0-1-0.446-1-1v-6c0-0.554 0.446-1 1-1z\" enable-background=\"new\" fill-rule=\"evenodd\" style=\"paint-order:stroke fill markers\"/>
@@ -160,7 +182,12 @@
                             ((> load 30) 'battery-060)
                             ((> load 10) 'battery-020)
                             ((> load 0) 'battery-000)))))))
-    (create-image icon 'svg t :scale 1)))
+    (eye-widget
+     (a-list :text "Battery")
+     (a-list :text (format "%s%%" load)
+             :font-weight "bold"))
+    ;; (create-image icon 'svg t :scale 1)
+    ))
 
 ;; (defconst eye-battery-status-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

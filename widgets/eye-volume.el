@@ -45,11 +45,14 @@
 </svg>")
 
 (eye-let volume
-  (let* ((volume (string-to-number (s-trim (shell-command-to-string "pamixer --get-volume"))))
-         (icon (cond ((> volume 70) 'audio-volume-high)
-                     ((> volume 40) 'audio-volume-medium)
-                     ((> volume 0) 'audio-volume-low)
-                     (t 'audio-volume-muted))))
-    (create-image (eval icon) 'svg t :scale 1)))
+  (let* ((volume (s-trim (shell-command-to-string "pamixer --get-volume")))
+         ;; (icon (cond ((> volume 70) 'audio-volume-high)
+         ;;             ((> volume 40) 'audio-volume-medium)
+         ;;             ((> volume 0) 'audio-volume-low)
+         ;;             (t 'audio-volume-muted)))
+         )
+    (eye-widget "Volume" (a-list :text volume :font-weight "bold"))
+    ;; (create-image (eval icon) 'svg t :scale 1)
+    ))
 
 (provide 'eye-volume)

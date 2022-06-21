@@ -1,42 +1,3 @@
-(defun multiline-svg (&rest lines)
-  (let* ((font (face-attribute 'default :family))
-         (font-weight "normal")
-         (default-params (a-list
-                          :font-family (face-attribute 'default :family)
-                          :font-size eye-panel-font-size
-                          :letter-spacing eye-panel-letter-spacing
-                          :font-weight font-weight
-                          :fill "white"))
-         (svg-lines (cl-loop for line in lines
-                       collect (cond ((listp line) (a-merge default-params line))
-                                     ((stringp line) (a-merge default-params (a-list :text line))))))
-
-         (image-width (* (+ eye-panel-letter-spacing  ;; TODO figure out maximum letter spacing
-                            eye-panel-font-width)
-                         (1+ (-max (mapcar #'length lines)))))
-         (image-height eye-panel-height)
-         (svg (svg-create image-width image-height))
-         (margin-top (/ (- image-height (* (length svg-lines) eye-panel-font-size)) (1+ (length svg-lines)))) ;; TODO figure out panel font size for each line
-         )
-
-    ;; (svg-rectangle svg 0 0 image-width image-height
-    ;;                :stroke-width 2
-    ;;                :stroke-color "#4CB5F5")
-
-    (cl-loop for svg-line in svg-lines
-       do
-         (incf margin-top (a-get svg-line :font-size))
-         (svg-text svg (a-get svg-line :text)
-                   :font-family (a-get svg-line :font-family)
-                   :font-weight (a-get svg-line :font-weight)
-                   :letter-spacing (a-get svg-line :letter-spacing)
-                   :font-size (a-get svg-line :font-size)
-                   :fill (a-get svg-line :fill)
-                   :x 0
-                   :y margin-top))
-
-    svg))
-
 (defvar eye-panel-format (list))
 (defvar eye-panel-buffer-name "*Eye Panel*")
 (defvar eye-panel-font-size 14)
@@ -45,12 +6,55 @@
 (defvar eye-panel-height-lines 2)
 (defvar eye-panel-refresh-timer
   (let ((time (current-time))
-        (repeat 1)
+        (repeat 10)
         (timer (timer-create))
         (fn #'eye-panel-refresh))
     (timer-set-time timer time repeat)
     (timer-set-function timer fn)
     timer))
+
+(defun eye-widget (&rest lines)
+  (let* ((font (face-attribute 'default :family))
+         (font-weight "normal")
+         (lines (cl-loop
+                   with config = (a-list :font-family (face-attribute 'default :family)
+                                         :font-size eye-panel-font-size
+                                         :letter-spacing eye-panel-letter-spacing
+                                         :font-weight font-weight
+                                         :fill "white")
+                   for line in lines
+                   collect (cond ((listp line) (a-merge config line))
+                                 ((stringp line) (a-merge config (a-list :text line))))))
+         (image-width (* (+ eye-panel-letter-spacing ;; TODO figure out maximum letter spacing
+                            eye-panel-font-width)
+                         (1+ (-max (--map (length (a-get it :text)) lines)))))
+         (image-height eye-panel-height)
+         (svg (svg-create image-width image-height))
+         (margin-top (/ (- image-height (* (length lines) eye-panel-font-size)) (1+ (length lines)))) ;; TODO figure out panel font size for each line
+         )
+
+    ;; (svg-rectangle svg 0 0 image-width image-height
+    ;;                :stroke-width 2
+    ;;                :stroke-color "#4CB5F5")
+
+    (cl-loop for line in lines
+       do
+         (incf margin-top (a-get line :font-size))
+         (svg-text svg (a-get line :text)
+                   :font-family (a-get line :font-family)
+                   :font-weight (a-get line :font-weight)
+                   :letter-spacing (a-get line :letter-spacing)
+                   :font-size (a-get line :font-size)
+                   ;; :stroke "white"
+                   ;; :stroke-width 0.5
+                   :fill (a-get line :fill)
+                   :x 0
+                   :y margin-top))
+
+    (svg-image svg)))
+
+(defun eye-separator ()
+  (eye-widget ""))
 
 (define-minor-mode eye-panel-mode
     "Draw simple panel.")
@@ -91,10 +95,9 @@
       (let ((inhibit-read-only t))
         (delete-region (point-min) (point-max))
         (cl-loop for widget in eye-panel-format
-           when (symbolp widget)
            do (when-let (image (funcall (intern (format "eye-%s-lighter" widget))))
                 (insert-image image)
-                (insert-image (svg-image (multiline-svg "")))))))))
+                (insert-image (eye-separator))))))))
 
 (defun eye-panel-quit ()
   (interactive)
