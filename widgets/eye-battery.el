@@ -167,11 +167,11 @@
     (thena (a-list :power (battery-format "%L" result)
                    :load (string-to-number (battery-format "%p%%" result))
                    :remaining (battery-format "%t" result)
-                   :adapter-p (string= "ac" (downcase (battery-format "%L" result)))))
-    (thena (eyecon
+                   :adapter-p (string= "ac" (downcase (battery-format "%L" result))))))
+  :lighter (eyecon
             (a-list :text "Battery")
             (a-list :text (format "%s%%" (a-get result :load))
-                    :font-weight "bold")))))
+                    :font-weight "bold")))
 
 ;; (eye-let battery
 ;;   (let* ((battery-status (funcall battery-status-function))

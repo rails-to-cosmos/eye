@@ -90,12 +90,12 @@
 (eye-def-widget wifi
   (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
                                     (promise:make-process '("nmcli" "networking" "connectivity"))))
-    (thena (cl-loop for output across result collect (s-trim (s-join "\n" output))))
-    (thena (cl-destructuring-bind (enabled connectivity) result
+    (thena (cl-loop for output across result collect (s-trim (s-join "\n" output)))))
+  :lighter (cl-destructuring-bind (enabled connectivity) result
              (eyecon "Wi-Fi" (a-list :text (cond
                                              ((not enabled) "disabled")
                                              ((string= connectivity "limited") "limited")
                                              (t "on"))
-                                     :font-weight "bold"))))))
+                                     :font-weight "bold"))))
 
 (provide 'eye-wifi)

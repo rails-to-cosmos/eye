@@ -5,10 +5,10 @@
 (eye-def-widget datetime
   (promise-chain (promise:make-thread (function current-time))
     (thena (a-list :date (format-time-string "%d %b, %a" result)
-                   :time (format-time-string "%H:%M:%S" result)))
-    (thena (eyecon (a-get result :date)
+                   :time (format-time-string "%H:%M:%S" result))))
+  :lighter (eyecon (a-get result :date)
                    (a-list :text (a-get result :time)
-                           :font-weight "bold")))))
+                           :font-weight "bold")))
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

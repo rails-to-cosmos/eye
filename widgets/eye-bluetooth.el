@@ -3,7 +3,7 @@
 (require 'promise)
 (require 'eye-panel)
 
-(eye-def-persistant-widget bluetooth
+(eye-def-widget bluetooth
   (promise-chain (promise:make-process '("bluetoothctl" "--" "show"))
     (thena (s-split "\n" (s-join "\n" result)))
     (thena (apply #'a-merge (--map

@@ -122,43 +122,7 @@
 (defvar eye-widgets (list)
   "List of widgets to show in reports.")
 
-(cl-defmacro eye-def-widget (name &rest forms)
-  (declare (indent 1) (debug t))
-  (let ((vars (a-list :lighter (intern (format "eye-%s-lighter" name))
-                      :timer (intern (format "eye-%s-timer" name))
-                      :mode (intern (format "eye-%s-mode" name))
-                      :global-mode (intern (format "global-eye-%s-mode" name))
-                      :daemon (intern (format "eye-%s-daemon" name)))))
-    `(progn
-       (cl-pushnew (quote ,name) eye-widgets)
-       (define-minor-mode ,(a-get vars :mode) "Widget minor mode.")
-
-       (defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
-
-       (define-globalized-minor-mode ,(a-get vars :global-mode)
-           ,(a-get vars :mode) ,(a-get vars :mode) nil
-           (cond (,(a-get vars :global-mode) (timer-activate ,(a-get vars :timer)))
-                 (t (cancel-timer ,(a-get vars :timer)))))
-
-       (cl-defun ,(a-get vars :daemon) ()
-         (promise-done ,@forms
-                       (lambda (result) (setq ,(a-get vars :lighter) result))
-                       (lambda (reason)
-                         (setq eye-panel-format (delq (quote ,name) eye-panel-format))
-                         (message "Widget \"%s\" has been disabled due to refresh error: %s"
-                                  (quote ,name) reason)
-                         (message "Widget \"%s\" has been removed from `eye-panel-format'.
-Fix widget and try again." (quote ,name)))))
-
-       (defvar ,(a-get vars :timer)
-         (let ((time (current-time))
-               (repeat 1)
-               (timer (timer-create)))
-           (timer-set-time timer time repeat)
-           (timer-set-function timer (quote ,(a-get vars :daemon)))
-           timer)))))
-
-(cl-defmacro eye-def-persistant-widget (name store &key lighter persist)
+(cl-defmacro eye-def-widget (name store &key lighter persist)
   (declare (indent 1) (debug t))
   (let ((vars (a-list
                :store (intern (format "eye-%s-store" name))
@@ -191,17 +155,19 @@ Fix widget and try again." (quote ,name)))))
              (done (lambda (result)
                      (setq ,(a-get vars :lighter) result))))))
 
-       (cl-defun ,(a-get vars :init) ()
-         (setq ,(a-get vars :store) (persist-load (quote ,(a-get vars :store))))
-         (let ((result ,(a-get vars :store)))
-           ,persist))
+       ,(when persist
+          `(list (require 'persist)
 
-       (cl-defun ,(a-get vars :quit) ()
-         (persist-save (quote ,(a-get vars :store))))
+                 (cl-defun ,(a-get vars :init) ()
+                   (setq ,(a-get vars :store) (persist-load (quote ,(a-get vars :store))))
+                   (let ((result ,(a-get vars :store)))
+                     ,persist))
 
-       ;; (add-hook 'after-init-hook (function ,(a-get vars :init)))
-       (funcall (function ,(a-get vars :init)))
-       (add-hook 'kill-emacs-hook (function ,(a-get vars :quit)))
+                 (cl-defun ,(a-get vars :quit) ()
+                   (persist-save (quote ,(a-get vars :store))))
+
+                 (funcall (function ,(a-get vars :init)))
+                 (add-hook 'kill-emacs-hook (function ,(a-get vars :quit)))))
 
        (defvar ,(a-get vars :timer)
          (let ((time (current-time))
