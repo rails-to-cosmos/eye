@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'eye)
+(require 'eye-panel)
 
 (defun boolsort (lhs rhs)
   (cond
@@ -87,21 +87,15 @@
 ;;                          (ctbl:cp-get-selected-data-row component)
 ;;                          (ctbl:cp-get-selected-data-cell component)))))
 
-(eye-def-widget network-manager
-  :daemon (lambda (context)
-            (a-assoc context
-                     :enabled (s-trim (shell-command-to-string "nmcli radio wifi"))
-                     :connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
-  :lighter (lambda (context)
-             (let ((enabled (string= "enabled" (a-get* context :enabled)))
-                   (connectivity (a-get* context :connectivity)))
-               (list
-                (propertize
-                 (cond
-                   ((not enabled) "")
-                   ((string= connectivity "limited") "")
-                   (t ""))
-                 'display '((height 1.2)
-                            (raise -0.1)))))))
+(eye-def-widget wifi
+  (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
+                                    (promise:make-process '("nmcli" "networking" "connectivity"))))
+    (thena (cl-loop for output across result collect (s-trim (s-join "\n" output)))))
+  :lighter (cl-destructuring-bind (enabled connectivity) result
+             (eyecon "Wi-Fi" (a-list :text (cond
+                                             ((not enabled) "disabled")
+                                             ((string= connectivity "limited") "limited")
+                                             (t "on"))
+                                     :font-weight "bold"))))
 
-(provide 'eye-network-manager)
+(provide 'eye-wifi)

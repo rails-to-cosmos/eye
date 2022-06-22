@@ -1,0 +1,10 @@
+You know what to do
+
+#+begin_src emacs-lisp
+(global-eye-panel-mode)
+(setq eye-panel-format '(datetime battery wifi bluetooth brightness volume))
+#+end_src
+
+* TODO Audio
+** TODO Refresh after click
+** TODO Show percentage on change

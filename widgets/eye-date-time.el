@@ -1,17 +1,14 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'eye)
+(require 'eye-panel)
 
 (eye-def-widget datetime
-  :lighter (lambda (context)
-             (format "%s %s"
-                     (a-get* context :date)
-                     (a-get* context :time)))
-  :daemon (lambda (context)
-            (let ((now (current-time)))
-              (a-assoc context
-                       :date (format-time-string "%a, %d %b" now)
-                       :time (format-time-string "%H:%M" now)))))
+  (promise-chain (promise:make-thread (function current-time))
+    (thena (a-list :date (format-time-string "%d %b, %a" result)
+                   :time (format-time-string "%H:%M:%S" result))))
+  :lighter (eyecon (a-get result :date)
+                   (a-list :text (a-get result :time)
+                           :font-weight "bold")))
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")
