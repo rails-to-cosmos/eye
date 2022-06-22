@@ -162,32 +162,43 @@
 ;;   ;;   (svg-print test-svg))
 ;;   )
 
-(eye-let battery
-  (let* ((battery-status (funcall battery-status-function))
-         (power (battery-format "%L" battery-status))
-         (load (string-to-number (battery-format "%p%%" battery-status)))
-         (remaining (battery-format "%t" battery-status))
-         (adapter-p (string= "ac" (downcase power)))
-         (icon (eval (cond
-                       (adapter-p (cond
-                                    ((> load 90) 'battery-100-charging)
-                                    ((> load 70) 'battery-080-charging)
-                                    ((> load 50) 'battery-060-charging)
-                                    ((> load 30) 'battery-040-charging)
-                                    ((> load 10) 'battery-020-charging)
-                                    ((> load 0) 'battery-000-charging)))
-                       (t (cond
-                            ((> load 90) 'battery-100)
-                            ((> load 70) 'battery-080)
-                            ((> load 30) 'battery-060)
-                            ((> load 10) 'battery-020)
-                            ((> load 0) 'battery-000)))))))
-    (eyecon
-     (a-list :text "Battery")
-     (a-list :text (format "%s%%" load)
-             :font-weight "bold"))
-    ;; (create-image icon 'svg t :scale 1)
-    ))
+(eye-def-widget battery
+  (promise-chain (promise:make-thread battery-status-function)
+    (thena (a-list :power (battery-format "%L" result)
+                   :load (string-to-number (battery-format "%p%%" result))
+                   :remaining (battery-format "%t" result)
+                   :adapter-p (string= "ac" (downcase (battery-format "%L" result)))))
+    (thena (eyecon
+            (a-list :text "Battery")
+            (a-list :text (format "%s%%" (a-get result :load))
+                    :font-weight "bold")))))
+
+;; (eye-let battery
+;;   (let* ((battery-status (funcall battery-status-function))
+;;          (power (battery-format "%L" battery-status))
+;;          (load (string-to-number (battery-format "%p%%" battery-status)))
+;;          (remaining (battery-format "%t" battery-status))
+;;          (adapter-p (string= "ac" (downcase power)))
+;;          (icon (eval (cond
+;;                        (adapter-p (cond
+;;                                     ((> load 90) 'battery-100-charging)
+;;                                     ((> load 70) 'battery-080-charging)
+;;                                     ((> load 50) 'battery-060-charging)
+;;                                     ((> load 30) 'battery-040-charging)
+;;                                     ((> load 10) 'battery-020-charging)
+;;                                     ((> load 0) 'battery-000-charging)))
+;;                        (t (cond
+;;                             ((> load 90) 'battery-100)
+;;                             ((> load 70) 'battery-080)
+;;                             ((> load 30) 'battery-060)
+;;                             ((> load 10) 'battery-020)
+;;                             ((> load 0) 'battery-000)))))))
+;;     (eyecon
+;;      (a-list :text "Battery")
+;;      (a-list :text (format "%s%%" load)
+;;              :font-weight "bold"))
+;;     ;; (create-image icon 'svg t :scale 1)
+;;     ))
 
 ;; (defconst eye-battery-status-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

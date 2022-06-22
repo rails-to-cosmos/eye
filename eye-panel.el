@@ -1,3 +1,5 @@
+(require 'promise)
+
 (defvar eye-panel-format (list))
 (defvar eye-panel-buffer-name "*Eye Panel*")
 (defvar eye-panel-font-size 14)
@@ -6,7 +8,7 @@
 (defvar eye-panel-height-lines 2)
 (defvar eye-panel-refresh-timer
   (let ((time (current-time))
-        (repeat 10)
+        (repeat 1)
         (timer (timer-create))
         (fn #'eye-panel-refresh))
     (timer-set-time timer time repeat)
@@ -106,7 +108,7 @@
            do (eval (list (intern (format "global-eye-%s-mode" widget)) -1)))
 
         (cl-loop for widget in eye-panel-format
-           do (when-let (image (funcall (intern (format "eye-%s-lighter" widget))))
+           do (when-let (image (eval (intern (format "eye-%s-lighter" widget))))
                 (insert-image image)
                 (insert-image (eye-separator))))))))
 
@@ -118,48 +120,40 @@
 (defvar eye-widgets (list)
   "List of widgets to show in reports.")
 
-(cl-defmacro eye-let (widget-name let-forms)
+(cl-defmacro eye-def-widget (name &rest forms)
   (declare (indent 1) (debug t))
-  (cl-assert (listp let-forms) t (format "let-forms: list expected but %s found" (type-of let-forms)))
-  (cl-assert (eq (car let-forms) 'let*) t (format "let-forms should start with let*"))
-
-  (let ((widget-vars (a-list :data (intern (format "eye-%s-data" widget-name))
-                             :lighter (intern (format "eye-%s-lighter" widget-name))
-                             :timer (intern (format "eye-%s-timer" widget-name))
-                             :mode (intern (format "eye-%s-mode" widget-name))
-                             :global-mode (intern (format "global-eye-%s-mode" widget-name))
-                             :daemon (intern (format "eye-%s-daemon" widget-name))))
-        (widget-data (append '(a-list)
-                             (cl-loop for (key val) in (cadr let-forms)
-                                append (list (intern (format ":%s" key)) key)))))
-
+  (let ((vars (a-list :lighter (intern (format "eye-%s-lighter" name))
+                      :timer (intern (format "eye-%s-timer" name))
+                      :mode (intern (format "eye-%s-mode" name))
+                      :global-mode (intern (format "global-eye-%s-mode" name))
+                      :daemon (intern (format "eye-%s-daemon" name)))))
     `(progn
-       (cl-pushnew (quote ,widget-name) eye-widgets)
-       (define-minor-mode ,(a-get widget-vars :mode) "Widget minor mode.")
+       (cl-pushnew (quote ,name) eye-widgets)
+       (define-minor-mode ,(a-get vars :mode) "Widget minor mode.")
 
-       (define-globalized-minor-mode ,(a-get widget-vars :global-mode)
-           ,(a-get widget-vars :mode) ,(a-get widget-vars :mode) nil
-           (cond (,(a-get widget-vars :global-mode) (timer-activate ,(a-get widget-vars :timer)))
-                 (t (cancel-timer ,(a-get widget-vars :timer)))))
+       (defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
 
-       (defvar ,(a-get widget-vars :data) (a-list) "Widget data storage.")
+       (define-globalized-minor-mode ,(a-get vars :global-mode)
+           ,(a-get vars :mode) ,(a-get vars :mode) nil
+           (cond (,(a-get vars :global-mode) (timer-activate ,(a-get vars :timer)))
+                 (t (cancel-timer ,(a-get vars :timer)))))
 
-       (cl-defun ,(a-get widget-vars :daemon) ()
-         (let* (,@(cadr let-forms))
-           (setq ,(a-get widget-vars :data) (a-merge ,(a-get widget-vars :data) ,widget-data))))
+       (cl-defun ,(a-get vars :daemon) ()
+         (promise-done ,@forms
+                       (lambda (result) (setq ,(a-get vars :lighter) result))
+                       (lambda (reason)
+                         (setq eye-panel-format (delq (quote ,name) eye-panel-format))
+                         (message "Widget \"%s\" has been disabled due to refresh error: %s"
+                                  (quote ,name) reason)
+                         (message "Widget \"%s\" has been removed from `eye-panel-format'.
+Fix widget and try again." (quote ,name)))))
 
-       (cl-defun ,(a-get widget-vars :lighter) ()
-         (let ,(cl-loop for (key val) in (cadr let-forms)
-                  collect (list key `(a-get ,(a-get widget-vars :data)
-                                            ,(intern (format ":%s" key)))))
-           ,@(cddr let-forms)))
-
-       (defvar ,(a-get widget-vars :timer)
+       (defvar ,(a-get vars :timer)
          (let ((time (current-time))
                (repeat 1)
                (timer (timer-create)))
            (timer-set-time timer time repeat)
-           (timer-set-function timer (quote ,(a-get widget-vars :daemon)))
+           (timer-set-function timer (quote ,(a-get vars :daemon)))
            timer)))))
 
 (provide 'eye-panel)

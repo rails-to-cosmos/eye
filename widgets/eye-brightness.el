@@ -2,8 +2,10 @@
 
 (require 'eye-panel)
 
-(eye-let brightness
-  (let* ((brightness (car (last (s-split " " (s-trim (shell-command-to-string "brightness")))))))
-    (eyecon "Brightness" (a-list :text brightness :font-weight "bold"))))
+(eye-def-widget brightness
+  (promise-chain (promise:make-process '("brightness"))
+    (thena (car (last (s-split " " (s-trim (s-join "\n" result))))))
+    (thena (eyecon "Brightness" (a-list :text result
+                                        :font-weight "bold")))))
 
 (provide 'eye-brightness)

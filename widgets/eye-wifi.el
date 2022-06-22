@@ -87,13 +87,15 @@
 ;;                          (ctbl:cp-get-selected-data-row component)
 ;;                          (ctbl:cp-get-selected-data-cell component)))))
 
-(eye-let wifi
-  (let* ((enabled (s-trim (shell-command-to-string "nmcli radio wifi")))
-         (connectivity (s-trim (shell-command-to-string "nmcli networking connectivity"))))
-    (eyecon "Wi-Fi" (a-list :text (cond
-                                        ((not enabled) "disabled")
-                                        ((string= connectivity "limited") "limited")
-                                        (t "on"))
-                                :font-weight "bold"))))
+(eye-def-widget wifi
+  (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
+                                    (promise:make-process '("nmcli" "networking" "connectivity"))))
+    (thena (cl-loop for output across result collect (s-trim (s-join "\n" output))))
+    (thena (cl-destructuring-bind (enabled connectivity) result
+             (eyecon "Wi-Fi" (a-list :text (cond
+                                             ((not enabled) "disabled")
+                                             ((string= connectivity "limited") "limited")
+                                             (t "on"))
+                                     :font-weight "bold"))))))
 
 (provide 'eye-wifi)
