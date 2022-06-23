@@ -137,7 +137,10 @@
        (cl-pushnew (quote ,name) eye-widgets)
        (define-minor-mode ,(a-get vars :mode) "Widget minor mode.")
 
-       (defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
+       (require 'persist)
+       (persist-defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
+       (persist-defvar ,(a-get vars :store) (a-list) "Widget data store.")
+       (let ((result ,(a-get vars :store))) ,persist)
 
        (define-globalized-minor-mode ,(a-get vars :global-mode)
            ,(a-get vars :mode) ,(a-get vars :mode) nil
@@ -154,20 +157,6 @@
                      (message "Widget \"%s\" has been disabled due to refresh error: %s" (quote ,name) reason))
              (done (lambda (result)
                      (setq ,(a-get vars :lighter) result))))))
-
-       ,(when persist
-          `(list (require 'persist)
-
-                 (cl-defun ,(a-get vars :init) ()
-                   (setq ,(a-get vars :store) (persist-load (quote ,(a-get vars :store))))
-                   (let ((result ,(a-get vars :store)))
-                     ,persist))
-
-                 (cl-defun ,(a-get vars :quit) ()
-                   (persist-save (quote ,(a-get vars :store))))
-
-                 (funcall (function ,(a-get vars :init)))
-                 (add-hook 'kill-emacs-hook (function ,(a-get vars :quit)))))
 
        (defvar ,(a-get vars :timer)
          (let ((time (current-time))

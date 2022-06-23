@@ -22,7 +22,7 @@
                                                    (t "off"))
                                        :font-weight "bold"))
 
-  :persist (cond ((a-get* result :powered) (exwm-bluetooth-enabled (start-process "bluetoothctl" "*exwm*" "bluetoothctl" "--" "power" "on")))
+  :persist (cond ((a-get* result :powered) (start-process "bluetoothctl" "*exwm*" "bluetoothctl" "--" "power" "on"))
                  (t (start-process "bluetoothctl" "*exwm*" "bluetoothctl" "--" "power" "off"))))
 
 (provide 'eye-bluetooth)
