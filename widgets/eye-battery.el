@@ -171,7 +171,8 @@
   :lighter (eyecon
             (a-list :text "Battery")
             (a-list :text (format "%s%%" (a-get result :load))
-                    :font-weight "bold")))
+                    :font-weight "bold"))
+  :repeat 30)
 
 ;; (eye-let battery
 ;;   (let* ((battery-status (funcall battery-status-function))

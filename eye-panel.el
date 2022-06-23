@@ -6,9 +6,13 @@
 (defvar eye-panel-text-height nil)
 (defvar eye-panel-letter-spacing 0)
 (defvar eye-panel-height-lines 2)
+
+(defcustom eye-panel-refresh-interval 5
+  "Redraw panel repeatedly that many seconds apart.")
+
 (defvar eye-panel-refresh-timer
   (let ((time (current-time))
-        (repeat 1)
+        (repeat eye-panel-refresh-interval)
         (timer (timer-create))
         (fn #'eye-panel-refresh))
     (timer-set-time timer time repeat)
@@ -122,7 +126,7 @@
 (defvar eye-widgets (list)
   "List of widgets to show in reports.")
 
-(cl-defmacro eye-def-widget (name store &key lighter persist)
+(cl-defmacro eye-def-widget (name store &key lighter persist (repeat 1))
   (declare (indent 1) (debug t))
   (let ((vars (a-list
                :store (intern (format "eye-%s-store" name))
@@ -136,7 +140,7 @@
     `(progn
        (cl-pushnew (quote ,name) eye-widgets)
        (define-minor-mode ,(a-get vars :mode) "Widget minor mode.")
-
+       (defvar ,(a-get vars :timer) nil)
        (require 'persist)
        (persist-defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
        (persist-defvar ,(a-get vars :store) (a-list) "Widget data store.")
@@ -158,12 +162,15 @@
              (done (lambda (result)
                      (setq ,(a-get vars :lighter) result))))))
 
-       (defvar ,(a-get vars :timer)
-         (let ((time (current-time))
-               (repeat 1)
-               (timer (timer-create)))
-           (timer-set-time timer time repeat)
-           (timer-set-function timer (quote ,(a-get vars :daemon)))
-           timer)))))
+       (condition-case nil
+           (cancel-timer ,(a-get vars :timer))
+         (error nil))
+
+       (setq ,(a-get vars :timer)
+             (let ((time (current-time))
+                   (timer (timer-create)))
+               (timer-set-time timer time ,repeat)
+               (timer-set-function timer (quote ,(a-get vars :daemon)))
+               timer)))))
 
 (provide 'eye-panel)
