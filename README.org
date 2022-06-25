@@ -8,3 +8,5 @@ You know what to do
 * TODO Audio
 ** TODO Refresh after click
 * TODO Show percentage on change
+* Transmission
+transmission-remote -t all -i -it

@@ -87,7 +87,7 @@
     (thena (cl-destructuring-bind (enabled connectivity networks) result
              (a-list :enabled enabled
                      :connectivity connectivity
-                     :networks (eye-wifi-parse-available-networks networks)))))
+                     :networks (eye-wifi-parse-networks networks)))))
 
   :lighter (let-alist result
              (eyecon "Wi-Fi"
