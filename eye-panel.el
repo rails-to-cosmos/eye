@@ -144,7 +144,7 @@
        (require 'persist)
        (persist-defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
        (persist-defvar ,(a-get vars :store) (a-list) "Widget data store.")
-       (let ((result ,(a-get vars :store))) ,persist)
+       (let ((result ,(a-get vars :store))) (let-alist result ,persist))
 
        (define-globalized-minor-mode ,(a-get vars :global-mode)
            ,(a-get vars :mode) ,(a-get vars :mode) nil
@@ -156,8 +156,8 @@
            (promise-chain store
              (thena (setq ,(a-get vars :store) result)
                     result)
-             (thena ,lighter)
-             (catcha ;; (setq eye-panel-format (delq (quote ,name) eye-panel-format))
+             (thena (let-alist result ,lighter))
+             (catcha
               (setq ,(a-get vars :lighter)
                     (eyecon (format "%s" (quote ,name)) "?"))
               (message "Widget \"%s\" refresh error: %s" (quote ,name) reason))

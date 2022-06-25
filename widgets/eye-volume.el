@@ -46,10 +46,8 @@
 
 (eye-def-widget volume
   (promise-chain (promise:make-process '("pamixer" "--get-volume"))
-    (thena (s-trim (s-join "\n" result))))
-  :lighter (eyecon "Volume"
-                   (a-list :text result
-                           :font-weight "bold")))
+    (thena (a-list 'volume (s-trim (s-join "\n" result)))))
+  :lighter (eyecon "Volume" (a-list :text .volume :font-weight "bold")))
 
 ;; (eye-let volume
 ;;          (let* ((volume (s-trim (shell-command-to-string "pamixer --get-volume")))

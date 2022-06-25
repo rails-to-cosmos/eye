@@ -70,37 +70,38 @@
                       else
                       collect (s-replace escape-symbol "" (s-join separator chunk))))
                (when ssid
-                 (a-list :in-use (string= in-use "*")
-                         :ssid ssid
-                         :bars bars
-                         :channel channel
-                         :rate rate
-                         :security security)))))
+                 (a-list 'in-use (string= in-use "*")
+                         'ssid ssid
+                         'bars bars
+                         'channel channel
+                         'rate rate
+                         'security security)))))
 
 (eye-def-widget wifi
 
   (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
                                     (promise:make-process '("nmcli" "networking" "connectivity"))
                                     (promise:make-process '("nmcli" "-t" "device" "wifi"))))
+
     (thena (cl-loop for output across result
-              collect (s-trim (s-join "\n" output))))
-    (thena (cl-destructuring-bind (enabled connectivity networks) result
-             (a-list :enabled enabled
-                     :connectivity connectivity
-                     :networks (eye-wifi-parse-networks networks)))))
+              collect (s-trim (s-join "\n" output))
+              into result
+              finally (return (cl-destructuring-bind (enabled connectivity networks) result
+                                (a-list 'enabled enabled
+                                        'connectivity connectivity
+                                        'networks (eye-wifi-parse-networks networks)))))))
 
-  :lighter (let-alist result
-             (eyecon "Wi-Fi"
-                     (a-list :text (cond
-                                     ((not .:enabled) "disabled")
-                                     ((string= .:connectivity "limited") "limited")
-                                     (t (if-let (current-network (--first (a-get it :in-use) .:networks))
-                                            (let-alist current-network
-                                              (let* ((max-bars 4)
-                                                     (act-bars (- max-bars (s-count-matches "_" .:bars))))
-                                                (format "%d%%" (/ (* 100 act-bars) max-bars))))
+  :lighter (eyecon "Wi-Fi"
+                   (a-list :text (cond
+                                   ((not .enabled) "disabled")
+                                   ((string= .connectivity "limited") "limited")
+                                   (t (if-let (current-network (--first (a-get it :in-use) .networks))
+                                          (let-alist current-network
+                                            (let* ((max-bars 4)
+                                                   (act-bars (- max-bars (s-count-matches "_" .bars))))
+                                              (format "%d%%" (/ (* 100 act-bars) max-bars))))
 
-                                          "on")))
-                             :font-weight "bold"))))
+                                        "on")))
+                           :font-weight "bold")))
 
 (provide 'eye-wifi)
