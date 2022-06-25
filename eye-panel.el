@@ -157,8 +157,10 @@
              (thena (setq ,(a-get vars :store) result)
                     result)
              (thena ,lighter)
-             (catcha (setq eye-panel-format (delq (quote ,name) eye-panel-format))
-                     (message "Widget \"%s\" has been disabled due to refresh error: %s" (quote ,name) reason))
+             (catcha ;; (setq eye-panel-format (delq (quote ,name) eye-panel-format))
+              (setq ,(a-get vars :lighter)
+                    (eyecon (format "%s" (quote ,name)) "?"))
+              (message "Widget \"%s\" refresh error: %s" (quote ,name) reason))
              (done (lambda (result)
                      (setq ,(a-get vars :lighter) result))))))
 

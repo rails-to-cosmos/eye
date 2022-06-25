@@ -5,6 +5,8 @@ You know what to do
 (setq eye-panel-format '(datetime battery wifi bluetooth brightness volume))
 #+end_src
 
+* TODO Wifi
+** TODO Show name
 * TODO Audio
 ** TODO Refresh after click
 ** TODO Show percentage on change
