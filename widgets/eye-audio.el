@@ -60,4 +60,4 @@
 ;;            ;; (create-image (eval icon) 'svg t :scale 1)
 ;;            ))
 
-(provide 'eye-volume)
+(provide 'eye-audio)

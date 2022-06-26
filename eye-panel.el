@@ -7,7 +7,7 @@
 (defcustom eye-panel-height-lines 2
   "Eye panel height in lines.")
 
-(defcustom eye-panel-refresh-interval 0.1
+(defcustom eye-panel-refresh-interval 1
   "Redraw panel repeatedly that many seconds apart.")
 
 (defvar eye-panel-refresh-timer
@@ -33,9 +33,10 @@
                    for line in lines
                    collect (cond ((listp line) (a-merge config line))
                                  ((stringp line) (a-merge config (a-list :text line))))))
-         (image-width (* (+ eye-panel-letter-spacing ;; TODO figure out maximum letter spacing
-                            eye-panel-font-width)
-                         (1+ (-max (--map (length (a-get it :text)) lines)))))
+         (image-width (min (* (+ eye-panel-letter-spacing ;; TODO figure out maximum letter spacing
+                                 eye-panel-font-width)
+                              (1+ (-max (--map (length (a-get it :text)) lines))))
+                           500))
          (image-height eye-panel-height)
          (svg (svg-create image-width image-height))
          (margin-top (/ (- image-height (* (length lines) eye-panel-font-size)) (1+ (length lines)))) ;; TODO figure out panel font size for each line
