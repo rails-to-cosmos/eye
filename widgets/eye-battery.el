@@ -163,11 +163,11 @@
 ;;   )
 
 (eye-def-widget battery
-  (promise-chain (promise:make-thread battery-status-function)
-    (thena (a-list 'power (battery-format "%L" result)
-                   'load (string-to-number (battery-format "%p%%" result))
-                   'remaining (battery-format "%t" result)
-                   'adapter-p (string= "ac" (downcase (battery-format "%L" result))))))
+  :observer battery-status-function
+  :mapper (a-list 'power (battery-format "%L" result)
+                  'load (string-to-number (battery-format "%p%%" result))
+                  'remaining (battery-format "%t" result)
+                  'adapter-p (string= "ac" (downcase (battery-format "%L" result))))
   :lighter (eyecon "Battery"
                    (a-list :text (format "%s%%" .load)
                            :font-weight "bold"))

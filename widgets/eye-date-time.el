@@ -3,9 +3,9 @@
 (require 'eye-panel)
 
 (eye-def-widget datetime
-  (promise-chain (promise:make-thread (function current-time))
-    (thena (a-list 'date (format-time-string "%d %b, %a" result)
-                   'time (format-time-string "%H:%M" result))))
+  :observer (function current-time)
+  :mapper (a-list 'date (format-time-string "%d %b, %a" .datetime)
+                  'time (format-time-string "%H:%M" .datetime))
   :lighter (eyecon .date (a-list :text .time :font-weight "bold"))
   :repeat 10)
 

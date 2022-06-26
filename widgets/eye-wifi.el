@@ -79,17 +79,16 @@
 
 (eye-def-widget wifi
 
-  (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
-                                    (promise:make-process '("nmcli" "networking" "connectivity"))
-                                    (promise:make-process '("nmcli" "-t" "device" "wifi"))))
-
-    (thena (cl-loop for output across result
-              collect (s-trim (s-join "\n" output))
-              into result
-              finally (return (cl-destructuring-bind (enabled connectivity networks) result
-                                (a-list 'enabled enabled
-                                        'connectivity connectivity
-                                        'networks (eye-wifi-parse-networks networks)))))))
+  :observer (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
+                                              (promise:make-process '("nmcli" "networking" "connectivity"))
+                                              (promise:make-process '("nmcli" "-t" "device" "wifi"))))
+              (thena (cl-loop for output across result
+                        collect (s-trim (s-join "\n" output))
+                        into result
+                        finally (return (cl-destructuring-bind (enabled connectivity networks) result
+                                          (a-list 'enabled enabled
+                                                  'connectivity connectivity
+                                                  'networks (eye-wifi-parse-networks networks)))))))
 
   :lighter (eyecon "Wi-Fi"
                    (a-list :text (cond
