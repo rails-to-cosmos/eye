@@ -4,6 +4,7 @@
 (require 'eye-panel)
 
 (eye-def-widget bluetooth
+  :width 10
   :observer '("bluetoothctl" "--" "show")
   :mapper (apply #'a-merge (--map
                             (cl-destructuring-bind (key &optional val &rest _) (s-split ": " it)
@@ -17,10 +18,10 @@
                                   ('name (a-list 'name val))
                                   ('alias (a-list 'alias val)))))
                             .bluetooth))
-  :lighter (eyecon "Bluetooth"
-                   (a-list :text (cond (.powered "on")
-                                       (t "off"))
-                           :font-weight "bold"))
+  :lighter (list "Bluetooth"
+                 (a-list :text (cond (.powered "on")
+                                     (t "off"))
+                         :font-weight "bold"))
   :persist (cond (.powered (start-process "bluetoothctl" "*exwm*" "bluetoothctl" "--" "power" "on"))
                  (t (start-process "bluetoothctl" "*exwm*" "bluetoothctl" "--" "power" "off"))))
 

@@ -1,9 +1,10 @@
 ;; -*- lexical-binding: t; -*-
 
 (eye-def-widget audio
+  :width 7
   :observer '("pamixer" "--get-volume")
   :mapper (a-list 'volume (s-trim (s-join "\n" .audio)))
-  :lighter (eyecon "Volume" (a-list :text (format "%s%%" .volume) :font-weight "bold")))
+  :lighter (list "Volume" (a-list :text (format "%s%%" .volume) :font-weight "bold")))
 
 (defconst audio-volume-high "<svg width=\"24\" height=\"24\" enable-background=\"new\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">
  <title>Paper Symbolic Icon Theme</title>

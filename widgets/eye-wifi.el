@@ -2,6 +2,36 @@
 
 (require 'eye-panel)
 
+(eye-def-widget wifi
+  :width 6
+  :observer (promise-all (vector (promise:make-process '("nmcli" "radio" "wifi"))
+                                 (promise:make-process '("nmcli" "networking" "connectivity"))
+                                 (promise:make-process '("nmcli" "-t" "device" "wifi"))))
+
+  :mapper (cl-loop for output across .wifi
+             collect (s-trim (s-join "\n" output))
+             into result
+             finally (return (cl-destructuring-bind (enabled connectivity networks) result
+                               (a-list 'enabled (string= enabled "enabled")
+                                       'connectivity connectivity
+                                       'networks (eye-wifi-parse-networks networks)))))
+
+  :lighter (list "Wi-Fi"
+                 (a-list :text (cond
+                                 ((not .enabled) "off")
+                                 ((string= .connectivity "limited") "limited")
+                                 (t (if-let (current-network (--first (a-get it 'in-use) .networks))
+                                        (let-alist current-network
+                                          (let* ((max-bars 4)
+                                                 (act-bars (- max-bars (s-count-matches "_" .bars))))
+                                            (format "%d%%" (/ (* 100 act-bars) max-bars))))
+
+                                      "on")))
+                         :font-weight "bold"))
+
+  :persist (cond (.enabled (start-process "nmcli" (messages-buffer) "nmcli" "radio" "wifi" "on"))
+                 (t (start-process "nmcli" (messages-buffer) "nmcli" "radio" "wifi" "off"))))
+
 (defun boolsort (lhs rhs)
   (cond
     ((not (or lhs rhs)) 0)
@@ -58,6 +88,7 @@
 
 (cl-defun eye-wifi-parse-networks (status &optional (separator ":") (escape-symbol "\\"))
   (cl-loop for line in (s-split "\n" status)
+     unless (string-empty-p (s-trim line))
      collect (cl-destructuring-bind (in-use bssid ssid mode channel rate signal bars security)
                  (let ((parted (let ((group 0))
                                  (--partition-by (if (s-ends-with? escape-symbol it)
@@ -76,31 +107,5 @@
                          'channel channel
                          'rate rate
                          'security security)))))
-
-(eye-def-widget wifi
-
-  :observer (promise-chain (promise-all (list (promise:make-process '("nmcli" "radio" "wifi"))
-                                              (promise:make-process '("nmcli" "networking" "connectivity"))
-                                              (promise:make-process '("nmcli" "-t" "device" "wifi"))))
-              (thena (cl-loop for output across result
-                        collect (s-trim (s-join "\n" output))
-                        into result
-                        finally (return (cl-destructuring-bind (enabled connectivity networks) result
-                                          (a-list 'enabled enabled
-                                                  'connectivity connectivity
-                                                  'networks (eye-wifi-parse-networks networks)))))))
-
-  :lighter (eyecon "Wi-Fi"
-                   (a-list :text (cond
-                                   ((not .enabled) "disabled")
-                                   ((string= .connectivity "limited") "limited")
-                                   (t (if-let (current-network (--first (a-get it :in-use) .networks))
-                                          (let-alist current-network
-                                            (let* ((max-bars 4)
-                                                   (act-bars (- max-bars (s-count-matches "_" .bars))))
-                                              (format "%d%%" (/ (* 100 act-bars) max-bars))))
-
-                                        "on")))
-                           :font-weight "bold")))
 
 (provide 'eye-wifi)

@@ -4,10 +4,11 @@
 
 (eye-def-widget datetime
   :observer (function current-time)
+  :width 12
   :mapper (a-list 'date (format-time-string "%d %b, %a" .datetime)
-                  'time (format-time-string "%H:%M" .datetime))
-  :lighter (eyecon .date (a-list :text .time :font-weight "bold"))
-  :repeat 10)
+                  'time (format-time-string "%H:%M:%S" .datetime))
+  :lighter (list .date (a-list :text .time :font-weight "bold"))
+  :repeat 1)
 
 ;; (defconst eye-dt-schema
 ;;   (list (make-ctbl:cmodel :title "Key")

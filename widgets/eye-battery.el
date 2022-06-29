@@ -3,6 +3,18 @@
 (require 'eye-panel)
 (require 'battery)
 
+(eye-def-widget battery
+  :observer battery-status-function
+  :mapper (a-list 'power (battery-format "%L" result)
+                  'load (string-to-number (battery-format "%p%%" result))
+                  'remaining (battery-format "%t" result)
+                  'adapter-p (string= "ac" (downcase (battery-format "%L" result))))
+  :lighter (list "Battery"
+                 (a-list :text (format "%s%%" .load)
+                         :font-weight "bold"))
+  :width 8
+  :repeat 30)
+
 ;; (with-current-buffer (get-buffer-create "*Paint*")
 ;;   (delete-region (point-min) (point-max))
 ;;   (let ((svg (svg-create 16 16 :viewBox "0 0 16 16" :fill "white")))
@@ -161,17 +173,6 @@
 ;;   ;; (with-temp-file "/tmp/1.svg"
 ;;   ;;   (svg-print test-svg))
 ;;   )
-
-(eye-def-widget battery
-  :observer battery-status-function
-  :mapper (a-list 'power (battery-format "%L" result)
-                  'load (string-to-number (battery-format "%p%%" result))
-                  'remaining (battery-format "%t" result)
-                  'adapter-p (string= "ac" (downcase (battery-format "%L" result))))
-  :lighter (eyecon "Battery"
-                   (a-list :text (format "%s%%" .load)
-                           :font-weight "bold"))
-  :repeat 30)
 
 ;; (eye-let battery
 ;;   (let* ((battery-status (funcall battery-status-function))

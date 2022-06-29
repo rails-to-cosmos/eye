@@ -1,36 +1,69 @@
 (require 'promise)
 
 (defvar eye-panel-format (list))
-(defvar eye-panel-buffer-name "*Eye Panel*")
-(defvar eye-panel-font-size 14)
-(defvar eye-panel-letter-spacing 0)
+
+(defcustom eye-panel-buffer-name "*Eye Panel*"
+  "Buffer name for eye panel.")
+
+(defcustom eye-panel-letter-spacing 0
+  "Default letter spacing for eye panel.")
+
 (defcustom eye-panel-height-lines 2
   "Eye panel height in lines.")
 
-(defcustom eye-panel-refresh-interval 1
-  "Redraw panel repeatedly that many seconds apart.")
+(defcustom eye-panel-font-size 14
+  "Default font size for eye panel.")
 
-(defvar eye-panel-refresh-timer
-  (let ((time (current-time))
-        (repeat eye-panel-refresh-interval)
-        (timer (timer-create))
-        (fn #'eye-panel-refresh))
-    (timer-set-time timer time repeat)
-    (timer-set-function timer fn)
-    timer))
+(defconst eye-panel-config (a-list 'side 'top
+                                   'dedicated t
+                                   'window-parameters (a-list 'no-other-window t
+                                                              'no-delete-other-windows t
+                                                              'mode-line-format 'none
+                                                              'header-line-format 'none
+                                                              'tab-line-format 'none)))
+
+(defconst eye-panel-font (a-list :font-family (face-attribute 'default :family)
+                                 :font-size eye-panel-font-size
+                                 :letter-spacing eye-panel-letter-spacing
+                                 :font-weight "normal"
+                                 :fill (if (eq 'dark (frame-parameter nil 'background-mode))
+                                           "white"
+                                         "black")))
+
+(defun eyecon-create (width height)
+  (apply #'eyecon (cl-loop for j to height
+                     collect (make-string width ?\ ))))
+
+(defun eyecon-update (icon &rest lines)
+  (let* ((config eye-panel-font)
+         (lines (cl-loop for line in lines
+                   collect (cond ((listp line) (a-merge config line))
+                                 ((stringp line) (a-merge config (a-list :text line))))))
+         (svg icon)
+         (margin-top (/ (- eye-panel-height (* (length lines) eye-panel-font-size)) (1+ (length lines)))) ;; TODO figure out panel font size for each line
+         )
+
+    (cl-loop for line in lines
+       for id from 0
+       do
+         (incf margin-top (a-get line :font-size))
+         (svg-text svg (xml-escape-string (a-get line :text))
+                   :id (format "%d" id)
+                   :font-family (a-get line :font-family)
+                   :font-weight (a-get line :font-weight)
+                   :letter-spacing (a-get line :letter-spacing)
+                   :font-size (a-get line :font-size)
+                   ;; :stroke "white"
+                   ;; :stroke-width 0.5
+                   :fill (a-get line :fill)
+                   :x 0
+                   :y margin-top))
+
+    svg))
 
 (defun eyecon (&rest lines)
-  (let* ((font (face-attribute 'default :family))
-         (font-weight "normal")
-         (lines (cl-loop
-                   with config = (a-list :font-family (face-attribute 'default :family)
-                                         :font-size eye-panel-font-size
-                                         :letter-spacing eye-panel-letter-spacing
-                                         :font-weight font-weight
-                                         :fill (if (eq 'dark (frame-parameter nil 'background-mode))
-                                                   "white"
-                                                 "black"))
-                   for line in lines
+  (let* ((config eye-panel-font)
+         (lines (cl-loop for line in lines
                    collect (cond ((listp line) (a-merge config line))
                                  ((stringp line) (a-merge config (a-list :text line))))))
          (image-width (min (* (+ eye-panel-letter-spacing ;; TODO figure out maximum letter spacing
@@ -42,17 +75,19 @@
          (margin-top (/ (- image-height (* (length lines) eye-panel-font-size)) (1+ (length lines)))) ;; TODO figure out panel font size for each line
          )
 
-    ;; (svg-rectangle svg 0 0 image-width image-height
-    ;;                :fill (if (eq 'dark (frame-parameter nil 'background-mode))
-    ;;                          "black"
-    ;;                        "white")
-    ;;                :stroke-width 2
-    ;;                :stroke-color "#4CB5F5")
+    (svg-rectangle svg 0 0 image-width image-height
+                   :fill (if (eq 'dark (frame-parameter nil 'background-mode))
+                             "black"
+                           "white")
+                   :stroke-width 2
+                   :stroke-color "#4CB5F5")
 
     (cl-loop for line in lines
+       for id from 0
        do
          (incf margin-top (a-get line :font-size))
-         (svg-text svg (a-get line :text)
+         (svg-text svg (xml-escape-string (a-get line :text))
+                   :id (format "%d" id)
                    :font-family (a-get line :font-family)
                    :font-weight (a-get line :font-weight)
                    :letter-spacing (a-get line :letter-spacing)
@@ -63,9 +98,7 @@
                    :x 0
                    :y margin-top))
 
-    (svg-image svg)))
-
-(defvar eye-separator "")
+    svg))
 
 (defun eye-alist-p (list)
   "Non-null if and only if LIST is an alist with simple keys."
@@ -81,27 +114,14 @@
 
 (define-globalized-minor-mode global-eye-panel-mode
     eye-panel-mode eye-panel-mode nil
-    (when (get-buffer-window eye-panel-buffer-name)
-      (eye-panel-quit))
-    (cond (global-eye-panel-mode
-           (eye-panel-init)
-           (timer-activate eye-panel-refresh-timer))
-          (t (cancel-timer eye-panel-refresh-timer)
-             (cl-loop for widget in eye-widgets
-                do (eval (list (intern (format "global-eye-%s-mode" widget)) -1))))))
+    (if global-eye-panel-mode
+        (eye-panel-init)
+      (eye-panel-quit)))
 
 (defun eye-panel-init ()
   (let ((buffer (get-buffer-create eye-panel-buffer-name)))
     (with-current-buffer buffer
-      (let ((window (display-buffer-in-side-window
-                     buffer
-                     (a-list 'side 'top
-                             'dedicated t
-                             'window-parameters (a-list 'no-other-window t
-                                                        'no-delete-other-windows t
-                                                        'mode-line-format 'none
-                                                        'header-line-format 'none
-                                                        'tab-line-format 'none)))))
+      (let ((window (display-buffer-in-side-window buffer eye-panel-config)))
         (set-window-text-height window eye-panel-height-lines)
         (insert "Loading, please wait...")
 
@@ -109,63 +129,73 @@
           (setq eye-panel-font-height (cdr eye-panel-text-pixel-size)
                 eye-panel-font-width (car eye-panel-text-pixel-size)
                 eye-panel-height (window-text-height window t)
-                cursor-type nil
-                eye-separator (eyecon "")))
+                cursor-type nil))
 
-        (delete-region (point-min) (point-max))
+        (let ((inhibit-read-only t))
+          (delete-region (point-min) (point-max))
+
+          (cl-loop for widget in eye-widgets
+             if (member widget eye-panel-format)
+             do (eval (list (intern (format "global-eye-%s-mode" widget)) +1))
+             else
+             do (eval (list (intern (format "global-eye-%s-mode" widget)) -1)))
+
+          (cl-loop for widget in eye-panel-format
+             do
+               (eval (read (format "(setq eye-%s-eyecon (eyecon-create %d %d))"
+                                   widget
+                                   (eval (intern (format "eye-%s-width" widget)))
+                                   (eval (intern (format "eye-%s-height" widget))))))
+               (svg-insert-image (eval (intern (format "eye-%s-eyecon" widget))))))
+
         (setq window-size-fixed 'height)))))
-
-(defun eye-panel-refresh ()
-  (when-let (window (get-buffer-window eye-panel-buffer-name))
-    (with-current-buffer eye-panel-buffer-name
-      (let ((inhibit-read-only t))
-        (delete-region (point-min) (point-max))
-
-        (cl-loop for widget in eye-widgets
-           if (member widget eye-panel-format)
-           do (eval (list (intern (format "global-eye-%s-mode" widget)) +1))
-           else
-           do (eval (list (intern (format "global-eye-%s-mode" widget)) -1)))
-
-        (cl-loop for widget in eye-panel-format
-           do (when-let (image (eval (intern (format "eye-%s-lighter" widget))))
-                (insert-image image)
-                (insert-image eye-separator)))))))
 
 (defun eye-panel-quit ()
   (interactive)
-  (delete-windows-on eye-panel-buffer-name)
-  (kill-buffer eye-panel-buffer-name))
+  (when (get-buffer-window eye-panel-buffer-name)
+    (delete-windows-on eye-panel-buffer-name)
+    (kill-buffer eye-panel-buffer-name))
+
+  (cl-loop for widget in eye-widgets
+     do (eval (list (intern (format "global-eye-%s-mode" widget)) -1))))
 
 (defvar eye-widgets (list)
   "List of widgets to show in reports.")
 
-(cl-defmacro eye-def-widget (name &key process observer (mapper 'result) lighter persist (repeat 1))
+(cl-defmacro eye-def-widget (name &key process observer (mapper 'result) lighter persist (repeat 1) (width 50) (height 2))
   (declare (indent 1) (debug t))
-  (let ((vars (a-list
-               :data (intern (format "eye-%s-data" name))
-               :lighter (intern (format "eye-%s-lighter" name))
-               :timer (intern (format "eye-%s-timer" name))
-               :mode (intern (format "eye-%s-mode" name))
-               :global-mode (intern (format "global-eye-%s-mode" name))
-               :daemon (intern (format "eye-%s-daemon" name))
-               :init (intern (format "eye-%s-init" name))
-               :quit (intern (format "eye-%s-quit" name)))))
+  (let-alist (a-list 'data (intern (format "eye-%s-data" name))
+                     'lighter (intern (format "eye-%s-lighter" name))
+                     'eyecon (intern (format "eye-%s-eyecon" name))
+                     'width (intern (format "eye-%s-width" name))
+                     'height (intern (format "eye-%s-height" name))
+                     'timer (intern (format "eye-%s-timer" name))
+                     'mode (intern (format "eye-%s-mode" name))
+                     'global-mode (intern (format "global-eye-%s-mode" name))
+                     'observer (intern (format "eye-%s-observer" name))
+                     'init (intern (format "eye-%s-init" name))
+                     'quit (intern (format "eye-%s-quit" name)))
     `(progn
        (cl-pushnew (quote ,name) eye-widgets)
-       (define-minor-mode ,(a-get vars :mode) "Widget minor mode.")
-       (defvar ,(a-get vars :timer) nil)
+       (define-minor-mode ,.mode "Widget minor mode.")
+
+       (defvar ,.timer nil)
+       (setq ,.width ,width)
+       (setq ,.height ,height)
+       (defvar ,.eyecon (list) "Widget svg")
+
        (require 'persist)
-       (persist-defvar ,(a-get vars :lighter) (a-list) "Widget icon.")
-       (persist-defvar ,(a-get vars :data) (a-list) "Widget data store.")
-       (let-alist ,(a-get vars :data) ,persist)
+       (persist-defvar ,.lighter (list) "Widget icon data.")
+       (persist-defvar ,.data (a-list) "Widget data store.")
+       (let-alist ,.data ,persist)
 
-       (define-globalized-minor-mode ,(a-get vars :global-mode)
-           ,(a-get vars :mode) ,(a-get vars :mode) nil
-           (cond (,(a-get vars :global-mode) (timer-activate ,(a-get vars :timer)))
-                 (t (cancel-timer ,(a-get vars :timer)))))
+       (define-globalized-minor-mode ,.global-mode
+           ,.mode ,.mode nil
+           (cond (,.global-mode (timer-activate ,.timer)
+                                (,.observer))
+                 (t (cancel-timer ,.timer))))
 
-       (cl-defun ,(a-get vars :daemon) ()
+       (cl-defun ,.observer ()
          (promise-chain (let ((observer ,observer))
                           (cond ((promise-class-p observer) observer)
                                 ((functionp observer) (promise:make-thread observer))
@@ -176,24 +206,22 @@
            (thena (cond ((eye-alist-p result) result)
                         (t (a-list (quote ,name) result))))
            (thena (let-alist result ,mapper))
-           (thena (setq ,(a-get vars :data) result)
-                  result)
-           (thena (let-alist result
-                    (setq ,(a-get vars :lighter) ,lighter)))
-           (catcha
-            (setq ,(a-get vars :lighter)
-                  (eyecon (format "%s" (quote ,name)) "?"))
-            (message "Widget \"%s\" refresh error: %s" (quote ,name) reason))))
+           (thena (setq ,.data result) result)
+           (thena (setq ,.lighter (let-alist result ,lighter)))
+           (thena (apply #'eyecon-update ,.eyecon ,.lighter))
+           (catcha (setq ,.lighter (list (s-titleize (format "%s" (quote ,name))) "?"))
+                   (apply #'eyecon-update ,.eyecon ,.lighter)
+                   (message "Widget \"%s\" refresh error: %s" (quote ,name) reason))))
 
        (condition-case nil
-           (cancel-timer ,(a-get vars :timer))
+           (cancel-timer ,.timer)
          (error nil))
 
-       (setq ,(a-get vars :timer)
+       (setq ,.timer
              (let ((time (current-time))
                    (timer (timer-create)))
                (timer-set-time timer time ,repeat)
-               (timer-set-function timer (quote ,(a-get vars :daemon)))
+               (timer-set-function timer (quote ,.observer))
                timer)))))
 
 (provide 'eye-panel)
